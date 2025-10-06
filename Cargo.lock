@@ -2126,6 +2126,7 @@ name = "era_automation"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "rand",
 ]
 
 [[package]]
