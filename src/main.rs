@@ -1,4 +1,5 @@
 mod consts;
+mod sprites;
 
 use bevy::{
     prelude::*,
@@ -49,7 +50,6 @@ fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>) {
             ));
 
             // Resources
-
             let mut resource_data = vec![None; CHUNK_SIZE.element_product() as usize];
             for _ in 0..10 {
                 // Trees
