@@ -1,14 +1,18 @@
 mod consts;
 mod sprites;
+mod utils;
 
 use bevy::{
     prelude::*,
     sprite_render::{TileData, TilemapChunk, TilemapChunkTileData},
 };
-use rand::random_range;
+use rand::{random_bool, random_range};
 
 use crate::{
-    consts::{CAMERA_SPEED, CHUNK_SIZE, NUM_SPRITES, TILE_DISPLAY_SIZE},
+    consts::{
+        CAMERA_SPEED, CHUNK_SIZE, NUM_SPRITES, RESOURCE_DENSITY_BUSH, RESOURCE_DENSITY_LOG,
+        TILE_DISPLAY_SIZE,
+    },
     sprites::TerrainSprite,
 };
 
@@ -16,17 +20,37 @@ fn main() {
     App::new()
         //
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
-        .add_systems(Startup, (setup_map, setup_player))
-        .add_systems(Update, (tilemap_post_load, move_player))
+        .add_systems(
+            Startup,
+            ((setup_map, spawn_resources).chain(), setup_player),
+        )
+        .add_systems(
+            Update,
+            (tilemap_post_load, move_player, update_resource_sprites),
+        )
         //
         .run();
 }
 
-/// Spawn in the tiles for the world
+/// Entity handles for resources in each tile
+#[derive(Component, Default)]
+struct ResourceData([[Option<Entity>; CHUNK_SIZE.x as usize]; CHUNK_SIZE.y as usize]);
+impl ResourceData {
+    fn width(&self) -> usize {
+        self.0[0].len()
+    }
+
+    fn height(&self) -> usize {
+        self.0.len()
+    }
+}
+
 #[derive(Component)]
 struct TerrainLayer;
 #[derive(Component)]
 struct ResourceLayer;
+
+/// Set up the tilemap rendering for the world
 fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>) {
     let terrain_data = vec![
         Some(TileData::from_tileset_index(TerrainSprite::Grass as u16));
@@ -61,19 +85,6 @@ fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>) {
                     ));
 
                     // Resources
-                    let mut resource_data = vec![None; CHUNK_SIZE.element_product() as usize];
-                    for _ in 0..10 {
-                        // Trees
-                        let i = random_range(0..resource_data.len());
-                        resource_data[i] =
-                            Some(TileData::from_tileset_index(TerrainSprite::Log as u16));
-
-                        // Bushes
-                        let i = random_range(0..resource_data.len());
-                        resource_data[i] =
-                            Some(TileData::from_tileset_index(TerrainSprite::Bush as u16));
-                    }
-
                     spawner.spawn((
                         TilemapChunk {
                             chunk_size: CHUNK_SIZE,
@@ -81,7 +92,8 @@ fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>) {
                             tileset: asset_server.load("terrain_sheet.png"),
                             ..Default::default()
                         },
-                        TilemapChunkTileData(resource_data),
+                        TilemapChunkTileData(vec![None; CHUNK_SIZE.element_product() as usize]),
+                        ResourceData::default(),
                         // Z = 1 for resources
                         Transform::from_translation(Vec3::Z * 1.),
                         ResourceLayer,
@@ -98,6 +110,8 @@ fn setup_player(mut commands: Commands) {
         Camera2d,
         Sprite::from_color(Color::WHITE, TILE_DISPLAY_SIZE.as_vec2()),
         Player,
+        // Z == 2 for player
+        Transform::from_xyz(0., 0., 2.),
     ));
 }
 
@@ -135,4 +149,49 @@ fn move_player(
     };
 
     player.translation += (x * Vec3::X + y * Vec3::Y) * CAMERA_SPEED * timer.delta_secs();
+}
+
+/// Random generation for resources
+fn spawn_resources(mut commands: Commands, resources: Query<&mut ResourceData>) {
+    let choices = [TerrainSprite::Log, TerrainSprite::Bush];
+    let weights = [RESOURCE_DENSITY_LOG, RESOURCE_DENSITY_BUSH];
+    let total_weight = weights.iter().sum::<f32>().min(1.) as f64;
+    for mut resource_data in resources {
+        for i in 0..resource_data.height() {
+            for j in 0..resource_data.width() {
+                if random_bool(total_weight) {
+                    // Spawn entity
+                    let entity = match utils::rand::choice(&choices, &weights) {
+                        TerrainSprite::Log => commands.spawn(TerrainSprite::Log),
+                        TerrainSprite::Bush => commands.spawn(TerrainSprite::Bush),
+                        _ => unreachable!(),
+                    };
+
+                    // Add to data grid
+                    resource_data.0[i][j] = Some(entity.id());
+                }
+            }
+        }
+    }
+}
+
+/// Sync resource tilemap with underlying data
+fn update_resource_sprites(
+    query: Query<
+        (&mut TilemapChunkTileData, &ResourceData),
+        (With<ResourceLayer>, Changed<ResourceData>),
+    >,
+    resources: Query<&TerrainSprite>,
+) {
+    for (mut dst, src) in query {
+        for (i, row) in src.0.iter().enumerate() {
+            for (j, entity) in row.iter().enumerate() {
+                dst[i * row.len() + j] = entity.map(|entity| {
+                    let sprite = resources.get(entity).expect("Resource entity not found");
+
+                    TileData::from_tileset_index(*sprite as u16)
+                })
+            }
+        }
+    }
 }

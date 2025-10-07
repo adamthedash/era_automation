@@ -11,3 +11,7 @@ pub const CHUNK_SIZE: UVec2 = UVec2::splat(16);
 
 /// Number of sprites in the sprite sheet
 pub const NUM_SPRITES: u32 = 5;
+
+/// Resource density per tile
+pub const RESOURCE_DENSITY_LOG: f32 = 1. / 16.;
+pub const RESOURCE_DENSITY_BUSH: f32 = 1. / 16.;
