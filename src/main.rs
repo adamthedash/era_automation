@@ -7,7 +7,10 @@ use bevy::{
 };
 use rand::random_range;
 
-use crate::consts::{CAMERA_SPEED, CHUNK_SIZE, NUM_SPRITES, TILE_DISPLAY_SIZE};
+use crate::{
+    consts::{CAMERA_SPEED, CHUNK_SIZE, NUM_SPRITES, TILE_DISPLAY_SIZE},
+    sprites::TerrainSprite,
+};
 
 fn main() {
     App::new()
@@ -25,59 +28,65 @@ struct TerrainLayer;
 #[derive(Component)]
 struct ResourceLayer;
 fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let terrain_data =
-        vec![Some(TileData::from_tileset_index(0)); CHUNK_SIZE.element_product() as usize];
+    let terrain_data = vec![
+        Some(TileData::from_tileset_index(TerrainSprite::Grass as u16));
+        CHUNK_SIZE.element_product() as usize
+    ];
 
     for x in -3..3 {
         for y in -3..3 {
-            // Terrain
-            commands.spawn((
-                TilemapChunk {
-                    chunk_size: CHUNK_SIZE,
-                    tile_display_size: TILE_DISPLAY_SIZE,
-                    tileset: asset_server.load("terrain_sheet.png"),
-                    ..Default::default()
-                },
-                TilemapChunkTileData(terrain_data.clone()),
-                Transform::from_translation(
-                    (Vec2::new(x as f32, y as f32)
-                        * CHUNK_SIZE.as_vec2()
-                        * TILE_DISPLAY_SIZE.as_vec2())
-                    // Z = 0 for terrain
-                    .extend(0.),
-                ),
-                TerrainLayer,
-            ));
+            commands
+                .spawn((
+                    Transform::from_translation(
+                        (Vec2::new(x as f32, y as f32)
+                            * CHUNK_SIZE.as_vec2()
+                            * TILE_DISPLAY_SIZE.as_vec2())
+                        .extend(0.),
+                    ),
+                    Visibility::default(),
+                ))
+                .with_children(|spawner| {
+                    // Terrain
+                    spawner.spawn((
+                        TilemapChunk {
+                            chunk_size: CHUNK_SIZE,
+                            tile_display_size: TILE_DISPLAY_SIZE,
+                            tileset: asset_server.load("terrain_sheet.png"),
+                            ..Default::default()
+                        },
+                        TilemapChunkTileData(terrain_data.clone()),
+                        // Z = 0 for terrain
+                        Transform::from_translation(Vec3::Z * 0.),
+                        TerrainLayer,
+                    ));
 
-            // Resources
-            let mut resource_data = vec![None; CHUNK_SIZE.element_product() as usize];
-            for _ in 0..10 {
-                // Trees
-                let i = random_range(0..resource_data.len());
-                resource_data[i] = Some(TileData::from_tileset_index(1));
+                    // Resources
+                    let mut resource_data = vec![None; CHUNK_SIZE.element_product() as usize];
+                    for _ in 0..10 {
+                        // Trees
+                        let i = random_range(0..resource_data.len());
+                        resource_data[i] =
+                            Some(TileData::from_tileset_index(TerrainSprite::Log as u16));
 
-                // Bushes
-                let i = random_range(0..resource_data.len());
-                resource_data[i] = Some(TileData::from_tileset_index(2));
-            }
+                        // Bushes
+                        let i = random_range(0..resource_data.len());
+                        resource_data[i] =
+                            Some(TileData::from_tileset_index(TerrainSprite::Bush as u16));
+                    }
 
-            commands.spawn((
-                TilemapChunk {
-                    chunk_size: CHUNK_SIZE,
-                    tile_display_size: TILE_DISPLAY_SIZE,
-                    tileset: asset_server.load("terrain_sheet.png"),
-                    ..Default::default()
-                },
-                TilemapChunkTileData(resource_data),
-                Transform::from_translation(
-                    (Vec2::new(x as f32, y as f32)
-                        * CHUNK_SIZE.as_vec2()
-                        * TILE_DISPLAY_SIZE.as_vec2())
-                    // Z = 1 for resources
-                    .extend(1.),
-                ),
-                ResourceLayer,
-            ));
+                    spawner.spawn((
+                        TilemapChunk {
+                            chunk_size: CHUNK_SIZE,
+                            tile_display_size: TILE_DISPLAY_SIZE,
+                            tileset: asset_server.load("terrain_sheet.png"),
+                            ..Default::default()
+                        },
+                        TilemapChunkTileData(resource_data),
+                        // Z = 1 for resources
+                        Transform::from_translation(Vec3::Z * 1.),
+                        ResourceLayer,
+                    ));
+                });
         }
     }
 }
