@@ -16,7 +16,7 @@ use crate::{
         CAMERA_SPEED, CHUNK_SIZE, RESOURCE_DENSITY_BUSH, RESOURCE_DENSITY_LOG, TILE_DISPLAY_SIZE,
     },
     sprites::TerrainSprite,
-    village::{VillagePlugin, setup_village},
+    village::VillagePlugin,
 };
 
 fn main() {
@@ -250,21 +250,47 @@ fn update_resource_sprites(
     }
 }
 
+/// Spawn the village centre building
 fn spawn_village(
     chunks: Query<&Children, With<ChunkPos>>,
     mut machine_layers: Query<&mut TilemapChunkTileData, With<MachineryLayer>>,
     chunk_lut: Res<Chunks>,
 ) {
+    // Find the chunk
     let (chunk, offset) = chunk_lut.chunk_for_tile(IVec2::ZERO);
     let children = chunks.get(chunk).expect("Chunk not generated");
-    let machine_entity = children
+    // Find the machinery layer
+    let mut data = children
         .iter()
         .find(|entity| machine_layers.get_mut(*entity).is_ok())
-        .expect("MachineryLayer doesn't exist");
-    let mut data = machine_layers
-        .get_mut(machine_entity)
+        .and_then(|entity| machine_layers.get_mut(entity).ok())
         .expect("MachineryLayer doesn't exist");
 
+    // Place the village
     data[(offset.y * CHUNK_SIZE.y + offset.x) as usize] =
         Some(TileData::from_tileset_index(TerrainSprite::House as u16));
+}
+
+#[derive(Component)]
+struct Targetted;
+/// Targets a resource in range of the player
+fn target_resource(
+    player: Single<&Transform, With<Player>>,
+    chunk_lut: Res<Chunks>,
+    chunks: Query<&Children, With<ChunkPos>>,
+    mut res_layers: Query<&mut TilemapChunkTileData, With<ResourceLayer>>,
+) {
+    // Get player's chunk
+    let player_xy = player.translation.truncate();
+    let (chunk, offset) = chunk_lut.chunk_for_tile(player_xy.as_ivec2());
+    let children = chunks.get(chunk).expect("Chunk not generated");
+
+    // Find the layer
+    let mut data = children
+        .iter()
+        .find(|entity| res_layers.get_mut(*entity).is_ok())
+        .and_then(|entity| res_layers.get_mut(entity).ok())
+        .expect("ResourceLayer doesn't exist");
+
+    // Get the closest resource
 }
