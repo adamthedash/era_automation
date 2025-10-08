@@ -8,5 +8,5 @@ pub enum TerrainSprite {
     Log,
     Bush,
     Water,
-    Blank,
+    House,
 }

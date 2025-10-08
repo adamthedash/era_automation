@@ -1,28 +1,36 @@
+#![feature(variant_count)]
 mod consts;
 mod sprites;
 mod utils;
+mod village;
 
 use bevy::{
+    platform::collections::HashMap,
     prelude::*,
     sprite_render::{TileData, TilemapChunk, TilemapChunkTileData},
 };
-use rand::{random_bool, random_range};
+use rand::random_bool;
 
 use crate::{
     consts::{
-        CAMERA_SPEED, CHUNK_SIZE, NUM_SPRITES, RESOURCE_DENSITY_BUSH, RESOURCE_DENSITY_LOG,
-        TILE_DISPLAY_SIZE,
+        CAMERA_SPEED, CHUNK_SIZE, RESOURCE_DENSITY_BUSH, RESOURCE_DENSITY_LOG, TILE_DISPLAY_SIZE,
     },
     sprites::TerrainSprite,
+    village::{VillagePlugin, setup_village},
 };
 
 fn main() {
     App::new()
         //
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .add_plugins(VillagePlugin)
+        .init_resource::<Chunks>()
         .add_systems(
             Startup,
-            ((setup_map, spawn_resources).chain(), setup_player),
+            (
+                (setup_map, spawn_village, spawn_resources).chain(),
+                setup_player,
+            ),
         )
         .add_systems(
             Update,
@@ -45,13 +53,38 @@ impl ResourceData {
     }
 }
 
+#[derive(Component, Hash, PartialEq, Eq, Clone)]
+struct ChunkPos(IVec2);
+#[derive(Resource, Default)]
+struct Chunks(HashMap<ChunkPos, Entity>);
+impl Chunks {
+    /// Get the chunk entity and offset within for a given tile position
+    fn chunk_for_tile(&self, tile_pos: IVec2) -> (Entity, UVec2) {
+        let chunk_pos = ChunkPos(IVec2 {
+            x: tile_pos.x / CHUNK_SIZE.x as i32,
+            y: tile_pos.y / CHUNK_SIZE.y as i32,
+        });
+        let offset = IVec2 {
+            x: tile_pos.x % CHUNK_SIZE.x as i32,
+            y: tile_pos.y % CHUNK_SIZE.y as i32,
+        }
+        .as_uvec2();
+
+        let chunk = self.0.get(&chunk_pos).expect("Chunk not loaded");
+
+        (*chunk, offset)
+    }
+}
+
 #[derive(Component)]
 struct TerrainLayer;
+#[derive(Component)]
+struct MachineryLayer;
 #[derive(Component)]
 struct ResourceLayer;
 
 /// Set up the tilemap rendering for the world
-fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, mut chunks: ResMut<Chunks>) {
     let terrain_data = vec![
         Some(TileData::from_tileset_index(TerrainSprite::Grass as u16));
         CHUNK_SIZE.element_product() as usize
@@ -59,46 +92,63 @@ fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     for x in -3..3 {
         for y in -3..3 {
-            commands
-                .spawn((
-                    Transform::from_translation(
-                        (Vec2::new(x as f32, y as f32)
-                            * CHUNK_SIZE.as_vec2()
-                            * TILE_DISPLAY_SIZE.as_vec2())
-                        .extend(0.),
-                    ),
-                    Visibility::default(),
-                ))
-                .with_children(|spawner| {
-                    // Terrain
-                    spawner.spawn((
-                        TilemapChunk {
-                            chunk_size: CHUNK_SIZE,
-                            tile_display_size: TILE_DISPLAY_SIZE,
-                            tileset: asset_server.load("terrain_sheet.png"),
-                            ..Default::default()
-                        },
-                        TilemapChunkTileData(terrain_data.clone()),
-                        // Z = 0 for terrain
-                        Transform::from_translation(Vec3::Z * 0.),
-                        TerrainLayer,
-                    ));
+            let chunk_pos = ChunkPos(IVec2::new(x, y));
+            let mut entity = commands.spawn((
+                chunk_pos.clone(),
+                Transform::from_translation(
+                    (Vec2::new(x as f32, y as f32)
+                        * CHUNK_SIZE.as_vec2()
+                        * TILE_DISPLAY_SIZE.as_vec2())
+                    .extend(0.),
+                ),
+                Visibility::default(),
+            ));
+            entity.with_children(|spawner| {
+                // Terrain
+                spawner.spawn((
+                    TilemapChunk {
+                        chunk_size: CHUNK_SIZE,
+                        tile_display_size: TILE_DISPLAY_SIZE,
+                        tileset: asset_server.load("terrain_sheet.png"),
+                        ..Default::default()
+                    },
+                    TilemapChunkTileData(terrain_data.clone()),
+                    // Z = 0 for terrain
+                    Transform::from_translation(Vec3::Z * 0.),
+                    TerrainLayer,
+                ));
 
-                    // Resources
-                    spawner.spawn((
-                        TilemapChunk {
-                            chunk_size: CHUNK_SIZE,
-                            tile_display_size: TILE_DISPLAY_SIZE,
-                            tileset: asset_server.load("terrain_sheet.png"),
-                            ..Default::default()
-                        },
-                        TilemapChunkTileData(vec![None; CHUNK_SIZE.element_product() as usize]),
-                        ResourceData::default(),
-                        // Z = 1 for resources
-                        Transform::from_translation(Vec3::Z * 1.),
-                        ResourceLayer,
-                    ));
-                });
+                // Machinery
+                spawner.spawn((
+                    TilemapChunk {
+                        chunk_size: CHUNK_SIZE,
+                        tile_display_size: TILE_DISPLAY_SIZE,
+                        tileset: asset_server.load("terrain_sheet.png"),
+                        ..Default::default()
+                    },
+                    TilemapChunkTileData(vec![None; CHUNK_SIZE.element_product() as usize]),
+                    // Z = 1 for machinery
+                    Transform::from_translation(Vec3::Z * 1.),
+                    MachineryLayer,
+                ));
+
+                // Resources
+                spawner.spawn((
+                    TilemapChunk {
+                        chunk_size: CHUNK_SIZE,
+                        tile_display_size: TILE_DISPLAY_SIZE,
+                        tileset: asset_server.load("terrain_sheet.png"),
+                        ..Default::default()
+                    },
+                    TilemapChunkTileData(vec![None; CHUNK_SIZE.element_product() as usize]),
+                    ResourceData::default(),
+                    // Z = 1 for resources
+                    Transform::from_translation(Vec3::Z * 1.),
+                    ResourceLayer,
+                ));
+            });
+
+            chunks.0.insert(chunk_pos, entity.id());
         }
     }
 }
@@ -127,7 +177,8 @@ fn tilemap_post_load(
     for event in events.read() {
         if event.is_loaded_with_dependencies(chunk.tileset.id()) {
             let image = images.get_mut(&chunk.tileset).unwrap();
-            image.reinterpret_stacked_2d_as_array(NUM_SPRITES);
+            image
+                .reinterpret_stacked_2d_as_array(std::mem::variant_count::<TerrainSprite>() as u32);
         }
     }
 }
@@ -152,7 +203,10 @@ fn move_player(
 }
 
 /// Random generation for resources
-fn spawn_resources(mut commands: Commands, resources: Query<&mut ResourceData>) {
+fn spawn_resources(
+    mut commands: Commands,
+    resources: Query<&mut ResourceData, With<ResourceLayer>>,
+) {
     let choices = [TerrainSprite::Log, TerrainSprite::Bush];
     let weights = [RESOURCE_DENSITY_LOG, RESOURCE_DENSITY_BUSH];
     let total_weight = weights.iter().sum::<f32>().min(1.) as f64;
@@ -194,4 +248,23 @@ fn update_resource_sprites(
             }
         }
     }
+}
+
+fn spawn_village(
+    chunks: Query<&Children, With<ChunkPos>>,
+    mut machine_layers: Query<&mut TilemapChunkTileData, With<MachineryLayer>>,
+    chunk_lut: Res<Chunks>,
+) {
+    let (chunk, offset) = chunk_lut.chunk_for_tile(IVec2::ZERO);
+    let children = chunks.get(chunk).expect("Chunk not generated");
+    let machine_entity = children
+        .iter()
+        .find(|entity| machine_layers.get_mut(*entity).is_ok())
+        .expect("MachineryLayer doesn't exist");
+    let mut data = machine_layers
+        .get_mut(machine_entity)
+        .expect("MachineryLayer doesn't exist");
+
+    data[(offset.y * CHUNK_SIZE.y + offset.x) as usize] =
+        Some(TileData::from_tileset_index(TerrainSprite::House as u16));
 }
