@@ -19,6 +19,8 @@ impl Plugin for ResourcePlugin {
 #[derive(Resource, Default)]
 struct ResourceNodes(HashMap<TilePos, Entity>);
 
+#[derive(Component)]
+pub struct ResourceMarker;
 /// Populate a chunk with naturally spawning resources
 fn spawn_resources(
     event: On<ChunkCreated>,
@@ -56,6 +58,7 @@ fn spawn_resources(
                     },
                     // Z == 1 for resources
                     tile_pos.as_transform(1.),
+                    ResourceMarker,
                 ));
 
                 resources.0.insert(tile_pos, entity.id());

@@ -23,8 +23,11 @@ pub struct TilePos(pub IVec2);
 impl TilePos {
     /// Convert to transform in display space
     pub fn as_transform(&self, z: f32) -> Transform {
-        Transform::from_translation((self.0.as_vec2() * TILE_DISPLAY_SIZE.as_vec2()).extend(z))
-            .with_scale((TILE_DISPLAY_SIZE.as_vec2() / TILE_RAW_SIZE.as_vec2()).extend(1.))
+        self.as_world_pos().as_transform(z)
+    }
+
+    pub fn as_world_pos(&self) -> WorldPos {
+        WorldPos(self.0.as_vec2())
     }
 }
 
@@ -33,17 +36,24 @@ pub struct ChunkPos(pub IVec2);
 impl ChunkPos {
     /// Convert from display-space transform
     pub fn from_transform(transform: &Transform) -> Self {
-        Self(
-            transform
-                .translation
-                .truncate()
-                .as_ivec2()
-                .div_euclid(CHUNK_SIZE.as_ivec2() * TILE_DISPLAY_SIZE.as_ivec2()),
-        )
+        let world_pos = WorldPos::from_transform(transform);
+        Self(world_pos.0.as_ivec2() / CHUNK_SIZE.as_ivec2())
     }
 
     pub fn as_tile_pos(&self) -> TilePos {
         TilePos(self.0 * CHUNK_SIZE.as_ivec2())
+    }
+}
+
+pub struct WorldPos(pub Vec2);
+impl WorldPos {
+    pub fn from_transform(transform: &Transform) -> Self {
+        Self(transform.translation.truncate() / TILE_DISPLAY_SIZE.as_vec2())
+    }
+
+    pub fn as_transform(&self, z: f32) -> Transform {
+        Transform::from_translation((self.0 * TILE_DISPLAY_SIZE.as_vec2()).extend(z))
+            .with_scale((TILE_DISPLAY_SIZE.as_vec2() / TILE_RAW_SIZE.as_vec2()).extend(1.))
     }
 }
 

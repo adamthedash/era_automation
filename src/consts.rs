@@ -15,4 +15,8 @@ pub const CHUNK_SIZE: UVec2 = UVec2::splat(16);
 pub const RESOURCE_DENSITY_LOG: f32 = 1. / 16.;
 pub const RESOURCE_DENSITY_BUSH: f32 = 1. / 16.;
 
+/// Number of chunks around the player to load
 pub const CHUNK_LOAD_RADIUS: i32 = 3;
+
+/// Player's interact radius in world units
+pub const PLAYER_REACH: f32 = 2.;
