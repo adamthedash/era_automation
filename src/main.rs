@@ -14,62 +14,20 @@ use crate::{
     map::{ChunkLUT, ChunkPos, CreateChunk, MapPlugin},
     player::{Player, PlayerPlugin},
     resources::ResourcePlugin,
-    sprites::TerrainSprite,
+    sprites::SpritePlugin,
     village::VillagePlugin,
 };
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .add_plugins(SpritePlugin)
         .add_plugins(VillagePlugin)
         .add_plugins(MapPlugin)
         .add_plugins(PlayerPlugin)
         .add_plugins(ResourcePlugin)
-        .add_systems(Startup, load_sprite_sheet)
-        .add_systems(Update, (tilemap_post_load, spawn_chunks))
+        .add_systems(Update, (spawn_chunks))
         .run();
-}
-
-#[derive(Resource)]
-pub struct SpriteSheet {
-    image: Handle<Image>,
-    layout: Handle<TextureAtlasLayout>,
-}
-
-fn load_sprite_sheet(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut layouts: ResMut<Assets<TextureAtlasLayout>>,
-) {
-    let image = asset_server.load("terrain_sheet.png");
-
-    let layout = TextureAtlasLayout::from_grid(
-        UVec2::splat(16),
-        1,
-        std::mem::variant_count::<TerrainSprite>() as u32,
-        None,
-        None,
-    );
-    let layout = layouts.add(layout);
-
-    commands.insert_resource(SpriteSheet { image, layout });
-}
-
-/// After loading the sprite sheet, it must be turned into a 2d image array so the images can be
-/// indexed into properly. Not sure why this needs to be ran on an update schedule, and can't be
-/// baked into when the tilemap is spawned in.
-fn tilemap_post_load(
-    mut events: MessageReader<AssetEvent<Image>>,
-    mut images: ResMut<Assets<Image>>,
-    sprite_sheet: Res<SpriteSheet>,
-) {
-    for event in events.read() {
-        if event.is_loaded_with_dependencies(sprite_sheet.image.id()) {
-            let image = images.get_mut(sprite_sheet.image.id()).unwrap();
-            image
-                .reinterpret_stacked_2d_as_array(std::mem::variant_count::<TerrainSprite>() as u32);
-        }
-    }
 }
 
 /// Spawn chunks around the player if they're not generated yet

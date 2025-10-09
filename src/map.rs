@@ -5,15 +5,14 @@ use bevy::{
 };
 
 use crate::{
-    SpriteSheet,
-    consts::{CHUNK_SIZE, TILE_DISPLAY_SIZE},
+    consts::{CHUNK_SIZE, TILE_DISPLAY_SIZE, TILE_RAW_SIZE},
     sprites::TerrainSprite,
 };
 
 pub struct MapPlugin;
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (tilemap_post_load, create_chunks))
+        app.add_systems(Update, create_chunks)
             .init_resource::<ChunkLUT>()
             .add_message::<CreateChunk>();
     }
@@ -22,21 +21,24 @@ impl Plugin for MapPlugin {
 #[derive(Component, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct TilePos(pub IVec2);
 impl TilePos {
+    /// Convert to transform in display space
     pub fn as_transform(&self, z: f32) -> Transform {
-        Transform::from_translation(self.0.as_vec2().extend(z))
+        Transform::from_translation((self.0.as_vec2() * TILE_DISPLAY_SIZE.as_vec2()).extend(z))
+            .with_scale((TILE_DISPLAY_SIZE.as_vec2() / TILE_RAW_SIZE.as_vec2()).extend(1.))
     }
 }
 
 #[derive(Component, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct ChunkPos(pub IVec2);
 impl ChunkPos {
+    /// Convert from display-space transform
     pub fn from_transform(transform: &Transform) -> Self {
         Self(
             transform
                 .translation
                 .truncate()
                 .as_ivec2()
-                .div_euclid(CHUNK_SIZE.as_ivec2()),
+                .div_euclid(CHUNK_SIZE.as_ivec2() * TILE_DISPLAY_SIZE.as_ivec2()),
         )
     }
 
@@ -74,7 +76,7 @@ fn create_chunks(
             TilemapChunk {
                 chunk_size: CHUNK_SIZE,
                 tile_display_size: TILE_DISPLAY_SIZE,
-                tileset: asset_server.load("terrain_sheet.png#terrain"),
+                tileset: asset_server.load("terrain_sheet.png"),
                 ..Default::default()
             },
             TilemapChunkTileData(vec![
@@ -87,27 +89,5 @@ fn create_chunks(
 
         chunk_lut.0.insert(*pos, chunk.id());
         commands.trigger(ChunkCreated(*pos));
-    }
-}
-
-/// After loading the sprite sheet, it must be turned into a 2d image array so the images can be
-/// indexed into properly. Not sure why this needs to be ran on an update schedule, and can't be
-/// baked into when the tilemap is spawned in.
-fn tilemap_post_load(
-    chunk_query: Query<&TilemapChunk>,
-    mut events: MessageReader<AssetEvent<Image>>,
-    mut images: ResMut<Assets<Image>>,
-) {
-    let Some(chunk) = chunk_query.iter().next() else {
-        // No chunks generated yet
-        return;
-    };
-
-    for event in events.read() {
-        if event.is_loaded_with_dependencies(chunk.tileset.id()) {
-            let image = images.get_mut(&chunk.tileset).unwrap();
-            image
-                .reinterpret_stacked_2d_as_array(std::mem::variant_count::<TerrainSprite>() as u32);
-        }
     }
 }

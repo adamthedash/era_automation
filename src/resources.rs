@@ -2,10 +2,9 @@ use bevy::{platform::collections::HashMap, prelude::*};
 use rand::random_bool;
 
 use crate::{
-    SpriteSheet,
     consts::{CHUNK_SIZE, RESOURCE_DENSITY_BUSH, RESOURCE_DENSITY_LOG},
     map::{ChunkCreated, TilePos},
-    sprites::TerrainSprite,
+    sprites::{ResourceSprite, SpriteSheet},
     utils,
 };
 
@@ -27,13 +26,20 @@ fn spawn_resources(
     mut resources: ResMut<ResourceNodes>,
     sprite_sheet: Res<SpriteSheet>,
 ) {
-    let choices = [TerrainSprite::Log, TerrainSprite::Bush];
+    let choices = [ResourceSprite::Log, ResourceSprite::Bush];
     let weights = [RESOURCE_DENSITY_LOG, RESOURCE_DENSITY_BUSH];
     let total_weight = weights.iter().sum::<f32>().min(1.) as f64;
+
+    let chunk_tile_pos = event.0.as_tile_pos();
+
+    info!(
+        "Spawning resources for chunk: {:?}, pos {:?}",
+        event.0.0, chunk_tile_pos.0
+    );
     for y in 0..CHUNK_SIZE.y {
         for x in 0..CHUNK_SIZE.x {
             if random_bool(total_weight) {
-                let tile_pos = TilePos(event.0.as_tile_pos().0 + IVec2::new(x as i32, y as i32));
+                let tile_pos = TilePos(chunk_tile_pos.0 + IVec2::new(x as i32, y as i32));
 
                 let sprite = *utils::rand::choice(&choices, &weights);
 
