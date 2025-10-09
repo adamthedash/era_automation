@@ -20,3 +20,7 @@ pub const CHUNK_LOAD_RADIUS: i32 = 3;
 
 /// Player's interact radius in world units
 pub const PLAYER_REACH: f32 = 2.;
+
+pub const Z_TERRAIN: f32 = 0.;
+pub const Z_RESOURCES: f32 = 1.;
+pub const Z_PLAYER: f32 = 2.;

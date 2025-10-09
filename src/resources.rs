@@ -47,7 +47,6 @@ fn spawn_resources(
 
                 let entity = commands.spawn((
                     tile_pos,
-                    sprite,
                     Sprite {
                         image: sprite_sheet.image.clone(),
                         texture_atlas: Some(TextureAtlas {

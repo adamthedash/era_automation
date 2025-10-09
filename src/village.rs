@@ -6,16 +6,26 @@ use bevy::{
         schedule::IntoScheduleConfigs,
         system::{Commands, Query, Res},
     },
+    image::TextureAtlas,
+    math::IVec2,
     platform::collections::HashMap,
+    sprite::Sprite,
     text::TextSpan,
     time::Time,
     ui::{FlexDirection, Node, percent, widget::Text},
+};
+
+use crate::{
+    consts::Z_RESOURCES,
+    map::TilePos,
+    sprites::{ResourceSprite, SpriteSheet},
 };
 
 pub struct VillagePlugin;
 impl Plugin for VillagePlugin {
     fn build(&self, app: &mut bevy::app::App) {
         app.add_systems(Startup, (setup_village, setup_resource_display).chain())
+            .add_systems(Startup, spawn_village_centre)
             .add_systems(Update, (update_resources, update_resource_display));
     }
 }
@@ -117,4 +127,25 @@ pub fn update_resource_display(
             text.0 = new_text
         }
     }
+}
+
+#[derive(Component)]
+struct VillageCentre;
+/// Spawn the village centre that's used to deposit items
+fn spawn_village_centre(mut commands: Commands, sprite_sheet: Res<SpriteSheet>) {
+    let pos = TilePos(IVec2::ZERO);
+    commands.spawn((
+        pos,
+        // Z == 1, same layer as resources
+        pos.as_transform(Z_RESOURCES),
+        VillageCentre,
+        Sprite {
+            image: sprite_sheet.image.clone(),
+            texture_atlas: Some(TextureAtlas {
+                layout: sprite_sheet.layout.clone(),
+                index: ResourceSprite::House as usize,
+            }),
+            ..Default::default()
+        },
+    ));
 }

@@ -1,4 +1,8 @@
-use bevy::{self, prelude::*};
+use bevy::{
+    self,
+    ecs::{bundle::InsertMode, system::entity_command},
+    prelude::*,
+};
 
 use crate::{
     consts::{CAMERA_SPEED, PLAYER_REACH, TILE_DISPLAY_SIZE, TILE_RAW_SIZE},
@@ -10,7 +14,7 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup_player)
-            .add_systems(Update, (move_player, target_resource))
+            .add_systems(Update, (move_player, target_resource, pickup_resource))
             .add_observer(highlight_target)
             .add_observer(unhighlight_target);
     }
@@ -70,11 +74,16 @@ fn target_resource(
         .min_by(|(_, _, d1), (_, _, d2)| d1.total_cmp(d2));
 
     for (entity, _) in targetted_resources {
-        commands.entity(entity).remove::<Targetted>();
+        commands
+            .entity(entity)
+            .queue_silenced(entity_command::remove::<Targetted>());
     }
 
     if let Some((entity, _, _)) = closest {
-        commands.entity(entity).insert(Targetted);
+        commands
+            .entity(entity)
+            .queue_silenced(entity_command::insert(Targetted, InsertMode::Replace));
+        // commands.entity(entity).insert(Targetted);
     }
 }
 
@@ -94,5 +103,40 @@ fn unhighlight_target(
 ) {
     if let Ok(mut transform) = transforms.get_mut(event.entity) {
         transform.scale = (1. * TILE_DISPLAY_SIZE.as_vec2() / TILE_RAW_SIZE.as_vec2()).extend(1.);
+    }
+}
+
+#[derive(Component)]
+struct HeldItem;
+/// Pick up a resource and put it in the player's hand
+fn pickup_resource(
+    mut commands: Commands,
+    mut player: Single<(Entity), With<Player>>,
+    inputs: Res<ButtonInput<KeyCode>>,
+    targetted_resources: Query<(Entity, &Sprite), (With<ResourceMarker>, With<Targetted>)>,
+    held_item: Option<Single<(), With<HeldItem>>>,
+) {
+    if inputs.pressed(KeyCode::Space) {
+        if held_item.is_some() {
+            // Already holding something
+            return;
+        }
+
+        if let Some((resource_entity, sprite)) = targetted_resources.iter().next() {
+            // Add item to player
+            commands.entity(*player).with_children(|parent| {
+                parent.spawn((
+                    // Z == 1 for held items
+                    Transform::from_translation(
+                        (Vec2::splat(0.5) * TILE_DISPLAY_SIZE.as_vec2()).extend(1.),
+                    ),
+                    sprite.clone(),
+                    HeldItem,
+                ));
+            });
+
+            // Remove resource
+            commands.entity(resource_entity).despawn();
+        }
     }
 }
