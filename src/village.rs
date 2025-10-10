@@ -4,9 +4,9 @@ use std::collections::HashMap;
 use crate::{
     consts::Z_RESOURCES,
     map::TilePos,
-    player::{HeldItem, Player, Targettable, Targetted},
+    player::{HeldItem, Targettable, Targetted},
     resources::ResourceType,
-    sprites::{ResourceSprite, SpriteSheet},
+    sprites::{ResourceSprite, SpriteSheets},
 };
 
 pub struct VillagePlugin;
@@ -31,6 +31,7 @@ pub struct ResourceDrainRate(f32);
 #[derive(Component)]
 pub struct ResourceName(String);
 
+/// Initialise the starting resource stockpiles
 pub fn setup_village(mut commands: Commands) {
     commands.spawn((
         ResourceName("Wood".to_string()),
@@ -116,16 +117,16 @@ pub fn update_resource_display(
 #[derive(Component)]
 struct VillageCentre;
 /// Spawn the village centre that's used to deposit items
-fn spawn_village_centre(mut commands: Commands, sprite_sheet: Res<SpriteSheet>) {
+fn spawn_village_centre(mut commands: Commands, sprite_sheet: Res<SpriteSheets>) {
     let pos = TilePos(IVec2::ZERO);
     commands.spawn((
         pos,
         // Z == 1, same layer as resources
         pos.as_transform(Z_RESOURCES),
         Sprite {
-            image: sprite_sheet.image.clone(),
+            image: sprite_sheet.resources.image.clone(),
             texture_atlas: Some(TextureAtlas {
-                layout: sprite_sheet.layout.clone(),
+                layout: sprite_sheet.resources.layout.clone(),
                 index: ResourceSprite::House as usize,
             }),
             ..Default::default()

@@ -6,7 +6,7 @@ pub struct SpritePlugin;
 impl Plugin for SpritePlugin {
     fn build(&self, app: &mut App) {
         // Resource loading before any game stuff
-        app.add_systems(PreStartup, load_sprite_sheet)
+        app.add_systems(PreStartup, load_sprite_sheets)
             .add_systems(Update, tilemap_post_load);
     }
 }
@@ -51,19 +51,32 @@ pub enum ResourceSprite {
     House,
 }
 
-#[derive(Resource)]
+/// entity_sheet.png
+#[derive(Component, Clone, Copy)]
+#[repr(usize)]
+pub enum EntitySprite {
+    Player,
+}
+
 pub struct SpriteSheet {
     pub image: Handle<Image>,
     pub layout: Handle<TextureAtlasLayout>,
 }
 
-fn load_sprite_sheet(
+#[derive(Resource)]
+pub struct SpriteSheets {
+    /// Resource_sheet.png
+    pub resources: SpriteSheet,
+    /// entity_sheet.png
+    pub entities: SpriteSheet,
+}
+
+fn load_sprite_sheets(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     let image = asset_server.load("resource_sheet.png");
-
     let layout = TextureAtlasLayout::from_grid(
         TILE_RAW_SIZE,
         1,
@@ -72,6 +85,21 @@ fn load_sprite_sheet(
         None,
     );
     let layout = layouts.add(layout);
+    let resources = SpriteSheet { image, layout };
 
-    commands.insert_resource(SpriteSheet { image, layout });
+    let image = asset_server.load("entity_sheet.png");
+    let layout = TextureAtlasLayout::from_grid(
+        TILE_RAW_SIZE,
+        1,
+        std::mem::variant_count::<EntitySprite>() as u32,
+        None,
+        None,
+    );
+    let layout = layouts.add(layout);
+    let entities = SpriteSheet { image, layout };
+
+    commands.insert_resource(SpriteSheets {
+        resources,
+        entities,
+    });
 }

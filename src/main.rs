@@ -1,4 +1,5 @@
 #![feature(variant_count)]
+#![allow(clippy::type_complexity)]
 mod consts;
 mod map;
 mod player;

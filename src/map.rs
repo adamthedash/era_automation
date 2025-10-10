@@ -12,7 +12,7 @@ use crate::{
 pub struct MapPlugin;
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, create_chunks)
+        app.add_systems(Update, (create_chunks, update_transforms))
             .init_resource::<ChunkLUT>()
             .add_message::<CreateChunk>();
     }
@@ -45,6 +45,7 @@ impl ChunkPos {
     }
 }
 
+#[derive(Component, Clone, Copy)]
 pub struct WorldPos(pub Vec2);
 impl WorldPos {
     pub fn from_transform(transform: &Transform) -> Self {
@@ -99,5 +100,13 @@ fn create_chunks(
 
         chunk_lut.0.insert(*pos, chunk.id());
         commands.trigger(ChunkCreated(*pos));
+    }
+}
+
+/// Update the transforms when WorldPos changes
+fn update_transforms(query: Query<(&WorldPos, &mut Transform), Changed<WorldPos>>) {
+    for (world_pos, mut transform) in query {
+        let new_transform = world_pos.as_transform(transform.translation.z);
+        transform.translation = new_transform.translation;
     }
 }

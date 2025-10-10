@@ -1,7 +1,7 @@
 use bevy::math::UVec2;
 
-/// Pixels per second
-pub const CAMERA_SPEED: f32 = 128.;
+/// Tiles per second
+pub const PLAYER_SPEED: f32 = 4.;
 
 /// Size tiles are stored in the sprite sheet
 pub const TILE_RAW_SIZE: UVec2 = UVec2::splat(16);

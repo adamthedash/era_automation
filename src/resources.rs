@@ -5,7 +5,7 @@ use crate::{
     consts::{CHUNK_SIZE, RESOURCE_DENSITY_BUSH, RESOURCE_DENSITY_LOG},
     map::{ChunkCreated, TilePos},
     player::Targettable,
-    sprites::{ResourceSprite, SpriteSheet},
+    sprites::{ResourceSprite, SpriteSheets},
     utils,
 };
 
@@ -34,7 +34,7 @@ fn spawn_resources(
     event: On<ChunkCreated>,
     mut commands: Commands,
     mut resources: ResMut<ResourceNodes>,
-    sprite_sheet: Res<SpriteSheet>,
+    sprite_sheet: Res<SpriteSheets>,
 ) {
     let choices = [
         (ResourceSprite::Log, ResourceType::Wood),
@@ -59,9 +59,9 @@ fn spawn_resources(
                 let entity = commands.spawn((
                     tile_pos,
                     Sprite {
-                        image: sprite_sheet.image.clone(),
+                        image: sprite_sheet.resources.image.clone(),
                         texture_atlas: Some(TextureAtlas {
-                            layout: sprite_sheet.layout.clone(),
+                            layout: sprite_sheet.resources.layout.clone(),
                             index: sprite as usize,
                         }),
                         ..Default::default()

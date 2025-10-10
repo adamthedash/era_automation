@@ -5,10 +5,10 @@ use bevy::{
 };
 
 use crate::{
-    consts::{CAMERA_SPEED, PLAYER_REACH, TILE_DISPLAY_SIZE, TILE_RAW_SIZE},
-    map::WorldPos,
+    consts::{PLAYER_REACH, PLAYER_SPEED, TILE_DISPLAY_SIZE, TILE_RAW_SIZE, Z_PLAYER},
+    map::{TilePos, WorldPos},
     resources::{ResourceMarker, ResourceType},
-    sprites::ResourceSprite,
+    sprites::{EntitySprite, SpriteSheets},
 };
 
 pub struct PlayerPlugin;
@@ -23,18 +23,28 @@ impl Plugin for PlayerPlugin {
 
 #[derive(Component)]
 pub struct Player;
-fn setup_player(mut commands: Commands) {
+fn setup_player(mut commands: Commands, sprite_sheets: Res<SpriteSheets>) {
+    let world_pos = WorldPos(Vec2::ZERO);
+    commands.spawn((Camera2d, world_pos, Transform::IDENTITY));
+
     commands.spawn((
-        Camera2d,
-        Sprite::from_color(Color::WHITE, TILE_DISPLAY_SIZE.as_vec2()),
-        Player,
+        Sprite::from_atlas_image(
+            sprite_sheets.entities.image.clone(),
+            TextureAtlas {
+                layout: sprite_sheets.entities.layout.clone(),
+                index: EntitySprite::Player as usize,
+            },
+        ),
+        world_pos,
         // Z == 2 for player
-        Transform::from_xyz(0., 0., 2.),
+        world_pos.as_transform(Z_PLAYER),
+        Player,
     ));
 }
 
 fn move_player(
-    mut player: Single<&mut Transform, With<Player>>,
+    mut player: Single<&mut WorldPos, With<Player>>,
+    mut camera: Single<&mut WorldPos, (With<Camera2d>, Without<Player>)>,
     inputs: Res<ButtonInput<KeyCode>>,
     timer: Res<Time>,
 ) {
@@ -48,8 +58,15 @@ fn move_player(
         (false, true) => 1.,
         _ => 0.,
     };
+    if x == 0. && y == 0. {
+        // Not moving
+        return;
+    }
 
-    player.translation += (x * Vec3::X + y * Vec3::Y) * CAMERA_SPEED * timer.delta_secs();
+    player.0 += Vec2::new(x, y) * PLAYER_SPEED * timer.delta_secs();
+
+    // Update camera transform aswell
+    camera.0 = player.0;
 }
 
 #[derive(Component)]
@@ -60,24 +77,25 @@ pub struct Targetted;
 fn target_resource(
     mut commands: Commands,
     player: Single<&Transform, With<Player>>,
-    targettables: Query<(Entity, &Transform), With<Targettable>>,
-    targetted: Query<(Entity, &Transform), (With<Targettable>, With<Targetted>)>,
+    targettables: Query<(Entity, &TilePos), With<Targettable>>,
+    targetted: Query<Entity, (With<Targettable>, With<Targetted>)>,
 ) {
     let player_world_pos = WorldPos::from_transform(&player);
 
     let closest = targettables
         .iter()
-        .map(|(entity, transform)| {
-            let world_pos = WorldPos::from_transform(transform);
-            let distance2 = player_world_pos.0.distance_squared(world_pos.0);
+        .map(|(entity, tile_pos)| {
+            let distance2 = player_world_pos
+                .0
+                .distance_squared(tile_pos.as_world_pos().0);
 
-            (entity, transform, distance2)
+            (entity, tile_pos, distance2)
         })
         .filter(|(_, _, distance2)| *distance2 <= PLAYER_REACH.powi(2))
         .min_by(|(_, _, d1), (_, _, d2)| d1.total_cmp(d2));
 
     // TODO: Don't keep removing + adding if it's the same target
-    for (entity, _) in targetted {
+    for entity in targetted {
         commands
             .entity(entity)
             // Entity may be removed by the time this is ran, in which case it doesn't matter
@@ -115,7 +133,7 @@ pub struct HeldItem;
 /// Pick up a resource and put it in the player's hand
 fn pickup_resource(
     mut commands: Commands,
-    player: Single<Entity, With<Player>>,
+    player: Single<(Entity, &Transform), With<Player>>,
     inputs: Res<ButtonInput<KeyCode>>,
     targetted_resources: Query<
         (Entity, &Sprite, &ResourceType),
@@ -131,11 +149,14 @@ fn pickup_resource(
 
         if let Some((resource_entity, sprite, res_type)) = targetted_resources.iter().next() {
             // Add item to player
-            commands.entity(*player).with_children(|parent| {
+            commands.entity(player.0).with_children(|parent| {
                 parent.spawn((
                     // Z == 1 for held items
                     Transform::from_translation(
-                        (Vec2::splat(0.5) * TILE_DISPLAY_SIZE.as_vec2()).extend(1.),
+                        (Vec2::splat(0.5) * TILE_DISPLAY_SIZE.as_vec2()
+                            // Need to un-scale so offset is ok
+                            / player.1.scale.truncate())
+                        .extend(1.),
                     ),
                     sprite.clone(),
                     *res_type,
