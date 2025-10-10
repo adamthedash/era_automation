@@ -5,7 +5,8 @@ use crate::consts::TILE_RAW_SIZE;
 pub struct SpritePlugin;
 impl Plugin for SpritePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, load_sprite_sheet)
+        // Resource loading before any game stuff
+        app.add_systems(PreStartup, load_sprite_sheet)
             .add_systems(Update, tilemap_post_load);
     }
 }

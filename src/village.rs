@@ -1,23 +1,11 @@
-use bevy::{
-    app::{Plugin, Startup, Update},
-    ecs::{
-        component::Component,
-        query::Changed,
-        schedule::IntoScheduleConfigs,
-        system::{Commands, Query, Res},
-    },
-    image::TextureAtlas,
-    math::IVec2,
-    platform::collections::HashMap,
-    sprite::Sprite,
-    text::TextSpan,
-    time::Time,
-    ui::{FlexDirection, Node, percent, widget::Text},
-};
+use bevy::prelude::*;
+use std::collections::HashMap;
 
 use crate::{
     consts::Z_RESOURCES,
     map::TilePos,
+    player::{HeldItem, Player, Targettable, Targetted},
+    resources::ResourceType,
     sprites::{ResourceSprite, SpriteSheet},
 };
 
@@ -26,7 +14,10 @@ impl Plugin for VillagePlugin {
     fn build(&self, app: &mut bevy::app::App) {
         app.add_systems(Startup, (setup_village, setup_resource_display).chain())
             .add_systems(Startup, spawn_village_centre)
-            .add_systems(Update, (update_resources, update_resource_display));
+            .add_systems(
+                Update,
+                (update_resources, update_resource_display, deposit_resource),
+            );
     }
 }
 
@@ -39,13 +30,6 @@ pub struct ResourceDrainRate(f32);
 
 #[derive(Component)]
 pub struct ResourceName(String);
-
-#[derive(Component, Clone, Copy, Hash, PartialEq, Eq)]
-pub enum ResourceType {
-    Wood,
-    Food,
-    Water,
-}
 
 pub fn setup_village(mut commands: Commands) {
     commands.spawn((
@@ -138,7 +122,6 @@ fn spawn_village_centre(mut commands: Commands, sprite_sheet: Res<SpriteSheet>) 
         pos,
         // Z == 1, same layer as resources
         pos.as_transform(Z_RESOURCES),
-        VillageCentre,
         Sprite {
             image: sprite_sheet.image.clone(),
             texture_atlas: Some(TextureAtlas {
@@ -147,5 +130,31 @@ fn spawn_village_centre(mut commands: Commands, sprite_sheet: Res<SpriteSheet>) 
             }),
             ..Default::default()
         },
+        VillageCentre,
+        Targettable,
     ));
+}
+
+/// Deposit a held resource into the village
+fn deposit_resource(
+    mut commands: Commands,
+    inputs: Res<ButtonInput<KeyCode>>,
+    _village: If<Single<(), (With<VillageCentre>, With<Targetted>)>>,
+    items: Query<(Entity, &ResourceType), With<HeldItem>>,
+    mut stockpiles: Query<(&mut ResourceStockpile, &ResourceType)>,
+) {
+    if inputs.pressed(KeyCode::Space) {
+        for (entity, res_type) in items {
+            let (mut stockpile, _) = stockpiles
+                .iter_mut()
+                .find(|(_, stock_type)| *stock_type == res_type)
+                .expect("Stockpile not created");
+
+            // TODO: Proper amounts
+            stockpile.0 += 50.;
+
+            // Remove the item
+            commands.entity(entity).despawn();
+        }
+    }
 }

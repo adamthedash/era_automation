@@ -7,7 +7,8 @@ use bevy::{
 use crate::{
     consts::{CAMERA_SPEED, PLAYER_REACH, TILE_DISPLAY_SIZE, TILE_RAW_SIZE},
     map::WorldPos,
-    resources::ResourceMarker,
+    resources::{ResourceMarker, ResourceType},
+    sprites::ResourceSprite,
 };
 
 pub struct PlayerPlugin;
@@ -52,30 +53,34 @@ fn move_player(
 }
 
 #[derive(Component)]
-struct Targetted;
-/// Targets the closest resource to the player
+pub struct Targettable;
+#[derive(Component)]
+pub struct Targetted;
+/// Targets the closest thing to the player
 fn target_resource(
     mut commands: Commands,
     player: Single<&Transform, With<Player>>,
-    resources: Query<(Entity, &Transform), With<ResourceMarker>>,
-    targetted_resources: Query<(Entity, &Transform), (With<ResourceMarker>, With<Targetted>)>,
+    targettables: Query<(Entity, &Transform), With<Targettable>>,
+    targetted: Query<(Entity, &Transform), (With<Targettable>, With<Targetted>)>,
 ) {
     let player_world_pos = WorldPos::from_transform(&player);
 
-    let closest = resources
+    let closest = targettables
         .iter()
         .map(|(entity, transform)| {
-            let resource_world_pos = WorldPos::from_transform(transform);
-            let distance2 = player_world_pos.0.distance_squared(resource_world_pos.0);
+            let world_pos = WorldPos::from_transform(transform);
+            let distance2 = player_world_pos.0.distance_squared(world_pos.0);
 
             (entity, transform, distance2)
         })
         .filter(|(_, _, distance2)| *distance2 <= PLAYER_REACH.powi(2))
         .min_by(|(_, _, d1), (_, _, d2)| d1.total_cmp(d2));
 
-    for (entity, _) in targetted_resources {
+    // TODO: Don't keep removing + adding if it's the same target
+    for (entity, _) in targetted {
         commands
             .entity(entity)
+            // Entity may be removed by the time this is ran, in which case it doesn't matter
             .queue_silenced(entity_command::remove::<Targetted>());
     }
 
@@ -83,7 +88,6 @@ fn target_resource(
         commands
             .entity(entity)
             .queue_silenced(entity_command::insert(Targetted, InsertMode::Replace));
-        // commands.entity(entity).insert(Targetted);
     }
 }
 
@@ -107,13 +111,16 @@ fn unhighlight_target(
 }
 
 #[derive(Component)]
-struct HeldItem;
+pub struct HeldItem;
 /// Pick up a resource and put it in the player's hand
 fn pickup_resource(
     mut commands: Commands,
-    mut player: Single<(Entity), With<Player>>,
+    player: Single<Entity, With<Player>>,
     inputs: Res<ButtonInput<KeyCode>>,
-    targetted_resources: Query<(Entity, &Sprite), (With<ResourceMarker>, With<Targetted>)>,
+    targetted_resources: Query<
+        (Entity, &Sprite, &ResourceType),
+        (With<ResourceMarker>, With<Targetted>),
+    >,
     held_item: Option<Single<(), With<HeldItem>>>,
 ) {
     if inputs.pressed(KeyCode::Space) {
@@ -122,7 +129,7 @@ fn pickup_resource(
             return;
         }
 
-        if let Some((resource_entity, sprite)) = targetted_resources.iter().next() {
+        if let Some((resource_entity, sprite, res_type)) = targetted_resources.iter().next() {
             // Add item to player
             commands.entity(*player).with_children(|parent| {
                 parent.spawn((
@@ -131,6 +138,7 @@ fn pickup_resource(
                         (Vec2::splat(0.5) * TILE_DISPLAY_SIZE.as_vec2()).extend(1.),
                     ),
                     sprite.clone(),
+                    *res_type,
                     HeldItem,
                 ));
             });

@@ -4,6 +4,7 @@ use rand::random_bool;
 use crate::{
     consts::{CHUNK_SIZE, RESOURCE_DENSITY_BUSH, RESOURCE_DENSITY_LOG},
     map::{ChunkCreated, TilePos},
+    player::Targettable,
     sprites::{ResourceSprite, SpriteSheet},
     utils,
 };
@@ -14,6 +15,13 @@ impl Plugin for ResourcePlugin {
         app.init_resource::<ResourceNodes>()
             .add_observer(spawn_resources);
     }
+}
+
+#[derive(Component, Clone, Copy, Hash, PartialEq, Eq)]
+pub enum ResourceType {
+    Wood,
+    Food,
+    Water,
 }
 
 #[derive(Resource, Default)]
@@ -28,7 +36,10 @@ fn spawn_resources(
     mut resources: ResMut<ResourceNodes>,
     sprite_sheet: Res<SpriteSheet>,
 ) {
-    let choices = [ResourceSprite::Log, ResourceSprite::Bush];
+    let choices = [
+        (ResourceSprite::Log, ResourceType::Wood),
+        (ResourceSprite::Bush, ResourceType::Food),
+    ];
     let weights = [RESOURCE_DENSITY_LOG, RESOURCE_DENSITY_BUSH];
     let total_weight = weights.iter().sum::<f32>().min(1.) as f64;
 
@@ -43,7 +54,7 @@ fn spawn_resources(
             if random_bool(total_weight) {
                 let tile_pos = TilePos(chunk_tile_pos.0 + IVec2::new(x as i32, y as i32));
 
-                let sprite = *utils::rand::choice(&choices, &weights);
+                let (sprite, res_type) = *utils::rand::choice(&choices, &weights);
 
                 let entity = commands.spawn((
                     tile_pos,
@@ -55,9 +66,11 @@ fn spawn_resources(
                         }),
                         ..Default::default()
                     },
+                    res_type,
                     // Z == 1 for resources
                     tile_pos.as_transform(1.),
                     ResourceMarker,
+                    Targettable,
                 ));
 
                 resources.0.insert(tile_pos, entity.id());
