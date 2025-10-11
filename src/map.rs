@@ -7,12 +7,14 @@ use bevy::{
 use crate::{
     consts::{CHUNK_SIZE, TILE_DISPLAY_SIZE, TILE_RAW_SIZE},
     sprites::TerrainSprite,
+    utils::noise::{PointGenerator, perlin_stack},
 };
 
 pub struct MapPlugin;
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (create_chunks, update_transforms))
+        app.add_systems(Startup, init_world_gen)
+            .add_systems(Update, (create_chunks, update_transforms))
             .init_resource::<ChunkLUT>()
             .add_message::<CreateChunk>();
     }
@@ -58,6 +60,44 @@ impl WorldPos {
     }
 }
 
+/// Random generation for everything in the world
+#[derive(Resource)]
+struct WorldGenenerator {
+    terrain: Box<dyn PointGenerator<2>>,
+}
+impl WorldGenenerator {
+    fn generate_terrain(&self, pos: ChunkPos) -> TilemapChunkTileData {
+        let mut data = Vec::with_capacity(CHUNK_SIZE.element_product() as usize);
+
+        for i in 0..CHUNK_SIZE.y {
+            for j in 0..CHUNK_SIZE.x {
+                let pos = pos.0 + UVec2::new(i, j).as_ivec2();
+
+                let sample = self.terrain.get([pos.x as f64, pos.y as f64]);
+                let tile = match sample {
+                    -1_f64..0. => TerrainSprite::Water,
+                    0_f64..=1. => TerrainSprite::Grass,
+                    _ => unreachable!("Generated sample with value: {sample}"),
+                };
+                data.push(tile);
+            }
+        }
+
+        TilemapChunkTileData(
+            data.into_iter()
+                .map(|sprite| Some(TileData::from_tileset_index(sprite as u16)))
+                .collect(),
+        )
+    }
+}
+
+/// Set up the world generation
+fn init_world_gen(mut commands: Commands) {
+    commands.insert_resource(WorldGenenerator {
+        terrain: Box::new(perlin_stack(42, 4, 2., 2., 1. / 16.)),
+    });
+}
+
 #[derive(Resource, Default)]
 pub struct ChunkLUT(pub HashMap<ChunkPos, Entity>);
 
@@ -75,6 +115,7 @@ fn create_chunks(
     mut commands: Commands,
     mut chunk_lut: ResMut<ChunkLUT>,
     asset_server: Res<AssetServer>,
+    generator: Res<WorldGenenerator>,
 ) {
     for CreateChunk(pos) in messages.read() {
         let chunk = commands.spawn((
@@ -90,12 +131,7 @@ fn create_chunks(
                 tileset: asset_server.load("terrain_sheet.png"),
                 ..Default::default()
             },
-            TilemapChunkTileData(vec![
-                Some(TileData::from_tileset_index(
-                    TerrainSprite::Grass as u16
-                ));
-                CHUNK_SIZE.element_product() as usize
-            ]),
+            generator.generate_terrain(*pos),
         ));
 
         chunk_lut.0.insert(*pos, chunk.id());
