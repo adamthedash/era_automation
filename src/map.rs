@@ -3,11 +3,12 @@ use bevy::{
     prelude::*,
     sprite_render::{TileData, TilemapChunk, TilemapChunkTileData},
 };
+use libnoise::Generator;
 
 use crate::{
     consts::{CHUNK_SIZE, TILE_DISPLAY_SIZE, TILE_RAW_SIZE},
     sprites::TerrainSprite,
-    utils::noise::{PointGenerator, perlin_stack},
+    utils::noise::{MyGenerator, perlin_stack},
 };
 
 pub struct MapPlugin;
@@ -63,7 +64,7 @@ impl WorldPos {
 /// Random generation for everything in the world
 #[derive(Resource)]
 struct WorldGenenerator {
-    terrain: Box<dyn PointGenerator<2>>,
+    terrain: Box<dyn MyGenerator<2>>,
 }
 impl WorldGenenerator {
     fn generate_terrain(&self, pos: ChunkPos) -> TilemapChunkTileData {
@@ -94,7 +95,7 @@ impl WorldGenenerator {
 /// Set up the world generation
 fn init_world_gen(mut commands: Commands) {
     commands.insert_resource(WorldGenenerator {
-        terrain: Box::new(perlin_stack(42, 4, 2., 2., 1. / 16.)),
+        terrain: Box::new(perlin_stack(42, 4, 2., 2., 1. / 2.)),
     });
 }
 
