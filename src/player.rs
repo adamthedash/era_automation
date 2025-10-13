@@ -5,9 +5,12 @@ use bevy::{
 };
 
 use crate::{
-    consts::{PLAYER_REACH, PLAYER_SPEED, TILE_DISPLAY_SIZE, TILE_RAW_SIZE, Z_PLAYER},
+    consts::{
+        PLAYER_REACH, PLAYER_SPEED, RESOURCE_PICKUP_AMOUNT, TILE_DISPLAY_SIZE, TILE_RAW_SIZE,
+        Z_PLAYER,
+    },
     map::{TilePos, WorldPos},
-    resources::{ResourceMarker, ResourceType},
+    resources::{ResourceAmount, ResourceMarker, ResourceType},
     sprites::{EntitySprite, SpriteSheets},
 };
 
@@ -36,7 +39,6 @@ pub fn setup_player(mut commands: Commands, sprite_sheets: Res<SpriteSheets>) {
             },
         ),
         world_pos,
-        // Z == 2 for player
         world_pos.as_transform(Z_PLAYER),
         Player,
     ));
@@ -135,8 +137,8 @@ fn pickup_resource(
     mut commands: Commands,
     player: Single<(Entity, &Transform), With<Player>>,
     inputs: Res<ButtonInput<KeyCode>>,
-    targetted_resources: Query<
-        (Entity, &Sprite, &ResourceType),
+    mut targetted_resources: Query<
+        (Entity, &Sprite, &ResourceType, &mut ResourceAmount),
         (With<ResourceMarker>, With<Targetted>),
     >,
     held_item: Option<Single<(), With<HeldItem>>>,
@@ -147,25 +149,38 @@ fn pickup_resource(
             return;
         }
 
-        if let Some((resource_entity, sprite, res_type)) = targetted_resources.iter().next() {
+        if let Some((resource_entity, sprite, res_type, mut amount)) =
+            targetted_resources.iter_mut().next()
+        {
+            let pickup_amount = RESOURCE_PICKUP_AMOUNT.min(amount.0);
+
             // Add item to player
             commands.entity(player.0).with_children(|parent| {
                 parent.spawn((
-                    // Z == 1 for held items
+                    // Game data
+                    *res_type,
+                    ResourceAmount(pickup_amount),
+                    HeldItem,
+                    // Render
                     Transform::from_translation(
                         (Vec2::splat(0.5) * TILE_DISPLAY_SIZE.as_vec2()
                             // Need to un-scale so offset is ok
                             / player.1.scale.truncate())
+                        // Z == 1 for held items
                         .extend(1.),
                     ),
                     sprite.clone(),
-                    *res_type,
-                    HeldItem,
                 ));
             });
 
-            // Remove resource
-            commands.entity(resource_entity).despawn();
+            // Remove resource if it's depleted
+            if amount.0 == pickup_amount {
+                // Player has grabbed it all, so remove the node
+                commands.entity(resource_entity).despawn();
+            } else {
+                // Player has only picked up some of it
+                amount.0 -= pickup_amount;
+            }
         }
     }
 }

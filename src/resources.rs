@@ -1,9 +1,10 @@
 use bevy::{platform::collections::HashMap, prelude::*, sprite_render::TilemapChunkTileData};
-use num_enum::TryFromPrimitive;
 use rand::random_bool;
 
 use crate::{
-    consts::{CHUNK_SIZE, RESOURCE_DENSITY_BUSH, RESOURCE_DENSITY_LOG},
+    consts::{
+        CHUNK_SIZE, RESOURCE_DENSITY_BUSH, RESOURCE_DENSITY_LOG, RESOURCE_SPAWN_AMOUNT, Z_RESOURCES,
+    },
     map::{ChunkCreated, ChunkLUT, TilePos},
     player::Targettable,
     sprites::{ResourceSprite, SpriteSheets, TerrainSprite},
@@ -25,6 +26,11 @@ pub enum ResourceType {
     Water,
 }
 
+/// The amount of resource left in a node
+#[derive(Component)]
+pub struct ResourceAmount(pub usize);
+
+/// Sparse lookup for all resource nod entities spawned in the world
 #[derive(Resource, Default)]
 struct ResourceNodes(HashMap<TilePos, Entity>);
 
@@ -59,6 +65,9 @@ fn spawn_resources(
     for y in 0..CHUNK_SIZE.y {
         for x in 0..CHUNK_SIZE.x {
             if random_bool(total_weight) {
+                // Check what terrain is on this tile
+                // TODO: Create data layer in terrain so we don't need to work with TileChunk
+                // data directly
                 let terrain = tile_data[((CHUNK_SIZE.x - y - 1) * CHUNK_SIZE.x + x) as usize];
                 if terrain
                     .map(|t| {
@@ -74,9 +83,15 @@ fn spawn_resources(
                 let tile_pos = TilePos(chunk_tile_pos.0 + IVec2::new(x as i32, y as i32));
 
                 let (sprite, res_type) = *utils::rand::choice(&choices, &weights);
-
                 let entity = commands.spawn((
+                    // Game data
                     tile_pos,
+                    res_type,
+                    // TODO: Resource amount spawn logic
+                    ResourceAmount(RESOURCE_SPAWN_AMOUNT),
+                    ResourceMarker,
+                    Targettable,
+                    // Render
                     Sprite {
                         image: sprite_sheet.resources.image.clone(),
                         texture_atlas: Some(TextureAtlas {
@@ -85,11 +100,7 @@ fn spawn_resources(
                         }),
                         ..Default::default()
                     },
-                    res_type,
-                    // Z == 1 for resources
-                    tile_pos.as_transform(1.),
-                    ResourceMarker,
-                    Targettable,
+                    tile_pos.as_transform(Z_RESOURCES),
                 ));
 
                 resources.0.insert(tile_pos, entity.id());

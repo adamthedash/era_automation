@@ -5,7 +5,7 @@ use crate::{
     consts::Z_RESOURCES,
     map::TilePos,
     player::{HeldItem, Targettable, Targetted},
-    resources::ResourceType,
+    resources::{ResourceAmount, ResourceType},
     sprites::{ResourceSprite, SpriteSheets},
 };
 
@@ -35,20 +35,20 @@ pub struct ResourceName(String);
 pub fn setup_village(mut commands: Commands) {
     commands.spawn((
         ResourceName("Wood".to_string()),
-        ResourceDrainRate(1.),
+        ResourceDrainRate(1. / 6.),
         ResourceStockpile(100.),
         ResourceType::Wood,
     ));
     commands.spawn((
         ResourceName("Food".to_string()),
-        ResourceDrainRate(1.),
-        ResourceStockpile(0.),
+        ResourceDrainRate(1. / 6.),
+        ResourceStockpile(100.),
         ResourceType::Food,
     ));
     commands.spawn((
         ResourceName("Water".to_string()),
-        ResourceDrainRate(1.),
-        ResourceStockpile(0.),
+        ResourceDrainRate(1. / 6.),
+        ResourceStockpile(100.),
         ResourceType::Water,
     ));
 }
@@ -121,7 +121,6 @@ fn spawn_village_centre(mut commands: Commands, sprite_sheet: Res<SpriteSheets>)
     let pos = TilePos(IVec2::ZERO);
     commands.spawn((
         pos,
-        // Z == 1, same layer as resources
         pos.as_transform(Z_RESOURCES),
         Sprite {
             image: sprite_sheet.resources.image.clone(),
@@ -141,18 +140,17 @@ fn deposit_resource(
     mut commands: Commands,
     inputs: Res<ButtonInput<KeyCode>>,
     _village: If<Single<(), (With<VillageCentre>, With<Targetted>)>>,
-    items: Query<(Entity, &ResourceType), With<HeldItem>>,
+    items: Query<(Entity, &ResourceType, &ResourceAmount), With<HeldItem>>,
     mut stockpiles: Query<(&mut ResourceStockpile, &ResourceType)>,
 ) {
     if inputs.pressed(KeyCode::Space) {
-        for (entity, res_type) in items {
+        for (entity, res_type, amount) in items {
             let (mut stockpile, _) = stockpiles
                 .iter_mut()
                 .find(|(_, stock_type)| *stock_type == res_type)
                 .expect("Stockpile not created");
 
-            // TODO: Proper amounts
-            stockpile.0 += 50.;
+            stockpile.0 += amount.0 as f32;
 
             // Remove the item
             commands.entity(entity).despawn();

@@ -28,3 +28,8 @@ pub const Z_PLAYER: f32 = 2.;
 
 /// Tiles around the starting point which are handled differently
 pub const STARTING_RADIUS: i32 = 25;
+
+/// How much the player picks up at once
+pub const RESOURCE_PICKUP_AMOUNT: usize = 1;
+/// How much a resource node spawns with
+pub const RESOURCE_SPAWN_AMOUNT: usize = 2;
