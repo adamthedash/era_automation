@@ -1,16 +1,6 @@
-#![feature(variant_count)]
-#![allow(clippy::type_complexity)]
-mod consts;
-mod map;
-mod player;
-mod resources;
-mod sprites;
-mod utils;
-mod village;
-
 use bevy::prelude::*;
 
-use crate::{
+use era_automation::{
     consts::CHUNK_LOAD_RADIUS,
     map::{ChunkLUT, ChunkPos, CreateChunk, MapPlugin},
     player::{Player, PlayerPlugin},
@@ -27,7 +17,7 @@ fn main() {
         .add_plugins(VillagePlugin)
         .add_plugins(PlayerPlugin)
         .add_plugins(ResourcePlugin)
-        .add_systems(Update, (spawn_chunks))
+        .add_systems(Update, spawn_chunks)
         .run();
 }
 

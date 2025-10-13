@@ -25,3 +25,6 @@ pub const PLAYER_REACH: f32 = 2.;
 pub const Z_TERRAIN: f32 = 0.;
 pub const Z_RESOURCES: f32 = 1.;
 pub const Z_PLAYER: f32 = 2.;
+
+/// Tiles around the starting point which are handled differently
+pub const STARTING_RADIUS: i32 = 50;

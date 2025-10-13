@@ -1,0 +1,10 @@
+#![feature(variant_count)]
+#![feature(iterator_try_collect)]
+#![allow(clippy::type_complexity)]
+pub mod consts;
+pub mod map;
+pub mod player;
+pub mod resources;
+pub mod sprites;
+pub mod utils;
+pub mod village;

@@ -23,7 +23,7 @@ impl Plugin for PlayerPlugin {
 
 #[derive(Component)]
 pub struct Player;
-fn setup_player(mut commands: Commands, sprite_sheets: Res<SpriteSheets>) {
+pub fn setup_player(mut commands: Commands, sprite_sheets: Res<SpriteSheets>) {
     let world_pos = WorldPos(Vec2::ZERO);
     commands.spawn((Camera2d, world_pos, Transform::IDENTITY));
 
@@ -42,7 +42,7 @@ fn setup_player(mut commands: Commands, sprite_sheets: Res<SpriteSheets>) {
     ));
 }
 
-fn move_player(
+pub fn move_player(
     mut player: Single<&mut WorldPos, With<Player>>,
     mut camera: Single<&mut WorldPos, (With<Camera2d>, Without<Player>)>,
     inputs: Res<ButtonInput<KeyCode>>,

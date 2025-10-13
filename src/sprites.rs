@@ -17,6 +17,7 @@ impl Plugin for SpritePlugin {
 pub enum TerrainSprite {
     Grass,
     Water,
+    Blank,
 }
 
 /// After loading the sprite sheet, it must be turned into a 2d image array so the images can be

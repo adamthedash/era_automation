@@ -1,11 +1,13 @@
+use std::mem::MaybeUninit;
+
 use libnoise::{Generator, ImprovedPerlin};
 
 // ==============================================
 // Libnoise extensions
 // ==============================================
 
+/// Libnoise Generator that's thread safe
 pub trait MyGenerator<const D: usize>: Generator<D> + Send + Sync {}
-
 impl<const D: usize, G> MyGenerator<D> for G where G: Generator<D> + Send + Sync {}
 
 /// Sum the outputs of many generators
@@ -31,13 +33,53 @@ where
     }
 }
 
+/// Applies the modulo operator to the inputs
+struct ModInput<const D: usize, G>
+where
+    G: Generator<D>,
+{
+    generator: G,
+    modulo: [f64; D],
+}
+
+impl<const D: usize, G> Generator<D> for ModInput<D, G>
+where
+    G: Generator<D>,
+{
+    fn sample(&self, point: [f64; D]) -> f64 {
+        let mut transformed_point = [0.; D];
+        for (i, (x, m)) in point.into_iter().zip(self.modulo).enumerate() {
+            transformed_point[i] = x.rem_euclid(m);
+        }
+        self.generator.sample(transformed_point)
+    }
+}
+
+/// Extension trait with my adapters
+trait GenAdapters<const D: usize>: Generator<D> + Sized {
+    fn mod_input(self, modulo: [f64; D]) -> ModInput<D, Self> {
+        ModInput {
+            generator: self,
+            modulo,
+        }
+    }
+}
+impl<const D: usize, G> GenAdapters<D> for G where G: Generator<D> + Sized {}
+
 /// Create a stack of perlin generators
+///
+/// num_octaves: Number of noise layers to use
+/// amplitude: Influence multiplier for each subsequent noise layer. Should usually be 0-1
+/// persistence: Granularity multiplier for each subsequent noise layer. Should usually be 0-1
+/// scale: Overall granularity multiplier, Bigger == more granular
+///
 pub fn perlin_stack(
     seed: u64,
     num_octaves: usize,
     amplitude: f64,
     persistence: f64,
     scale: f64,
+    offset: f64,
 ) -> impl MyGenerator<2> {
     assert!(num_octaves > 0);
     assert!(amplitude > 0.);
@@ -46,9 +88,11 @@ pub fn perlin_stack(
     // Pre-generate octave values
     let mut amplitudes = vec![1.];
     let mut frequencies = vec![1. * scale];
+    let mut offsets = vec![0.];
     for i in 0..num_octaves - 1 {
         amplitudes.push(amplitudes[i] * amplitude);
         frequencies.push(frequencies[i] * persistence);
+        offsets.push(offsets[i] + offset);
     }
 
     // To preserve variance, amplitudes must satisty unit circle constraint
@@ -58,7 +102,14 @@ pub fn perlin_stack(
     frequencies
         .into_iter()
         .zip(amplitudes)
-        .map(|(f, a)| ImprovedPerlin::<2>::new(seed).scale([f; 2]).mul(a))
+        .zip(offsets)
+        .map(|((f, a), o)| {
+            ImprovedPerlin::<2>::new(seed)
+                .mod_input([256.; _])
+                .scale([f; 2])
+                .translate([o; _])
+                .mul(a)
+        })
         .collect::<SumMany<_, _>>()
         .clamp(-1., 1.)
 }

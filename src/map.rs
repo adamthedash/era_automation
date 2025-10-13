@@ -3,12 +3,14 @@ use bevy::{
     prelude::*,
     sprite_render::{TileData, TilemapChunk, TilemapChunkTileData},
 };
-use libnoise::Generator;
 
 use crate::{
-    consts::{CHUNK_SIZE, TILE_DISPLAY_SIZE, TILE_RAW_SIZE},
+    consts::{CHUNK_SIZE, STARTING_RADIUS, TILE_DISPLAY_SIZE, TILE_RAW_SIZE},
     sprites::TerrainSprite,
-    utils::noise::{MyGenerator, perlin_stack},
+    utils::{
+        math::lerp,
+        noise::{MyGenerator, perlin_stack},
+    },
 };
 
 pub struct MapPlugin;
@@ -63,23 +65,38 @@ impl WorldPos {
 
 /// Random generation for everything in the world
 #[derive(Resource)]
-struct WorldGenenerator {
-    terrain: Box<dyn MyGenerator<2>>,
+pub struct WorldGenerator {
+    pub terrain: Box<dyn MyGenerator<2>>,
 }
-impl WorldGenenerator {
+impl WorldGenerator {
     fn generate_terrain(&self, pos: ChunkPos) -> TilemapChunkTileData {
         let mut data = Vec::with_capacity(CHUNK_SIZE.element_product() as usize);
 
-        for i in 0..CHUNK_SIZE.y {
-            for j in 0..CHUNK_SIZE.x {
-                let pos = pos.0 + UVec2::new(i, j).as_ivec2();
+        let world_pos = pos.as_tile_pos();
+        // Reverse Y direction as tilemap draws from top to bottom
+        for yo in (0..CHUNK_SIZE.y).rev() {
+            for xo in 0..CHUNK_SIZE.x {
+                let pos = world_pos.0 + UVec2::new(xo, yo).as_ivec2();
 
-                let sample = self.terrain.get([pos.x as f64, pos.y as f64]);
+                let mut sample = self.terrain.sample([pos.x as f64, pos.y as f64]);
+
+                let distance_from_centre = pos.length_squared();
+                if distance_from_centre < STARTING_RADIUS.pow(2) {
+                    // Ensure the starting zone isn't water by biasing towards grass
+
+                    sample = lerp(
+                        1.,
+                        sample,
+                        distance_from_centre.isqrt() as f64 / STARTING_RADIUS as f64,
+                    );
+                }
+
                 let tile = match sample {
                     -1_f64..0. => TerrainSprite::Water,
                     0_f64..=1. => TerrainSprite::Grass,
                     _ => unreachable!("Generated sample with value: {sample}"),
                 };
+
                 data.push(tile);
             }
         }
@@ -93,9 +110,9 @@ impl WorldGenenerator {
 }
 
 /// Set up the world generation
-fn init_world_gen(mut commands: Commands) {
-    commands.insert_resource(WorldGenenerator {
-        terrain: Box::new(perlin_stack(42, 4, 2., 2., 1. / 2.)),
+pub fn init_world_gen(mut commands: Commands) {
+    commands.insert_resource(WorldGenerator {
+        terrain: Box::new(perlin_stack(42, 4, 1., 0.5, 1. / 16., 0.)),
     });
 }
 
@@ -111,12 +128,12 @@ pub struct CreateChunk(pub ChunkPos);
 pub struct ChunkCreated(pub ChunkPos);
 
 /// Initialises a new chunk at a given position
-fn create_chunks(
+pub fn create_chunks(
     mut messages: MessageReader<CreateChunk>,
     mut commands: Commands,
     mut chunk_lut: ResMut<ChunkLUT>,
     asset_server: Res<AssetServer>,
-    generator: Res<WorldGenenerator>,
+    generator: Res<WorldGenerator>,
 ) {
     for CreateChunk(pos) in messages.read() {
         let chunk = commands.spawn((
@@ -141,7 +158,7 @@ fn create_chunks(
 }
 
 /// Update the transforms when WorldPos changes
-fn update_transforms(query: Query<(&WorldPos, &mut Transform), Changed<WorldPos>>) {
+pub fn update_transforms(query: Query<(&WorldPos, &mut Transform), Changed<WorldPos>>) {
     for (world_pos, mut transform) in query {
         let new_transform = world_pos.as_transform(transform.translation.z);
         transform.translation = new_transform.translation;
