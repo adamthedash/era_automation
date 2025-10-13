@@ -34,6 +34,13 @@ impl TilePos {
     pub fn as_world_pos(&self) -> WorldPos {
         WorldPos(self.0.as_vec2())
     }
+
+    pub fn to_chunk_offset(&self) -> (ChunkPos, UVec2) {
+        let chunk = ChunkPos(self.0 / CHUNK_SIZE.as_ivec2());
+        let offset = self.0.rem_euclid(CHUNK_SIZE.as_ivec2()).as_uvec2();
+
+        (chunk, offset)
+    }
 }
 
 #[derive(Component, Hash, PartialEq, Eq, Clone, Copy)]

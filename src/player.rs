@@ -2,23 +2,33 @@ use bevy::{
     self,
     ecs::{bundle::InsertMode, system::entity_command},
     prelude::*,
+    sprite_render::TilemapChunkTileData,
 };
 
 use crate::{
     consts::{
-        PLAYER_REACH, PLAYER_SPEED, RESOURCE_PICKUP_AMOUNT, TILE_DISPLAY_SIZE, TILE_RAW_SIZE,
-        Z_PLAYER,
+        CHUNK_SIZE, PLAYER_REACH, PLAYER_SPEED, RESOURCE_PICKUP_AMOUNT, TILE_DISPLAY_SIZE,
+        TILE_RAW_SIZE, Z_PLAYER,
     },
-    map::{TilePos, WorldPos},
+    map::{ChunkLUT, ChunkPos, TilePos, WorldPos},
     resources::{ResourceAmount, ResourceMarker, ResourceType},
-    sprites::{EntitySprite, SpriteSheets},
+    sprites::{EntitySprite, ResourceSprite, SpriteSheets, TerrainSprite},
 };
 
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup_player)
-            .add_systems(Update, (move_player, target_resource, pickup_resource))
+            .add_systems(
+                Update,
+                (
+                    move_player,
+                    target_resource,
+                    pickup_resource,
+                    check_near_water,
+                    show_water_icon,
+                ),
+            )
             .add_observer(highlight_target)
             .add_observer(unhighlight_target);
     }
@@ -182,5 +192,104 @@ fn pickup_resource(
                 amount.0 -= pickup_amount;
             }
         }
+    }
+}
+
+#[derive(Component)]
+struct NearWater;
+/// Checks whether the player is in range of a water source
+fn check_near_water(
+    player: Single<(Entity, &WorldPos), With<Player>>,
+    chunks_lut: Res<ChunkLUT>,
+    tile_data: Query<&TilemapChunkTileData>,
+    mut commands: Commands,
+) {
+    let (player_entity, player_pos) = *player;
+
+    // Check nearby tiles to see if they're water
+    let min = (player_pos.0 - PLAYER_REACH).floor().as_ivec2();
+    let max = (player_pos.0 + PLAYER_REACH).ceil().as_ivec2();
+
+    let near_water = (min.x..max.x)
+        .flat_map(|x| (min.y..max.y).map(move |y| TilePos(IVec2::new(x, y))))
+        // Tiles within reach
+        .filter(|tile_pos| {
+            let tile_centre = tile_pos.0.as_vec2() + 0.5;
+            player_pos.0.distance_squared(tile_centre) <= PLAYER_REACH.powi(2)
+        })
+        // Fetch chunk data, skip if it's not been initalised yet
+        .filter_map(|tile_pos| {
+            let (chunk_pos, offset) = tile_pos.to_chunk_offset();
+
+            // Fetch tile data for the chunk
+            let tile_data = chunks_lut
+                .0
+                .get(&chunk_pos)
+                .and_then(|entity| tile_data.get(*entity).ok());
+
+            tile_data.map(|td| (offset, td))
+        })
+        // Check if any are water tiles
+        .any(|(offset, tile_data)| {
+            // Check what terrain is on this tile
+            // TODO: Create data layer in terrain so we don't need to work with TileChunk
+            // data directly
+            let terrain =
+                tile_data[((CHUNK_SIZE.y - offset.y - 1) * CHUNK_SIZE.x + offset.x) as usize];
+            terrain
+                .map(|t| {
+                    TerrainSprite::try_from(t.tileset_index as usize)
+                        .expect("Invalid index for TerrainSprite Enum")
+                })
+                .is_some_and(|t| t == TerrainSprite::Water)
+        });
+
+    if near_water {
+        commands.entity(player_entity).insert_if_new(NearWater);
+    } else {
+        commands.entity(player_entity).remove::<NearWater>();
+    }
+}
+
+#[derive(Component)]
+struct WaterIcon;
+/// Shows the water icon when the player is near the water
+fn show_water_icon(
+    player: Single<(Entity, Option<&NearWater>, &Transform), With<Player>>,
+    targets: Query<(), With<Targetted>>,
+    water_icon: Option<Single<Entity, With<WaterIcon>>>,
+    mut commands: Commands,
+    sprite_sheets: Res<SpriteSheets>,
+) {
+    let (player, near_water, transform) = *player;
+
+    let show_icon = targets.is_empty() && near_water.is_some();
+
+    if show_icon {
+        if water_icon.is_none() {
+            // Spawn icon as child to player
+            commands.entity(player).with_child((
+                WaterIcon,
+                // Render
+                Transform::from_translation(
+                    (Vec2::splat(-0.5) * TILE_DISPLAY_SIZE.as_vec2()
+                // Need to un-scale so offset is ok
+                / transform.scale.truncate())
+                    // Z == 1 for held items
+                    .extend(1.),
+                ),
+                Sprite {
+                    image: sprite_sheets.resources.image.clone(),
+                    texture_atlas: Some(TextureAtlas {
+                        layout: sprite_sheets.resources.layout.clone(),
+                        index: ResourceSprite::House as usize,
+                    }),
+                    ..Default::default()
+                },
+            ));
+        }
+    } else if let Some(entity) = water_icon {
+        // Despawn the icon
+        commands.entity(*entity).despawn();
     }
 }
