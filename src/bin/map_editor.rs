@@ -1,8 +1,5 @@
-use bevy::{
-    input::mouse::{AccumulatedMouseScroll, MouseWheel},
-    prelude::*,
-};
-use bevy_egui::{EguiContext, EguiContexts, EguiPlugin, EguiPrimaryContextPass, egui};
+use bevy::{input::mouse::AccumulatedMouseScroll, prelude::*};
+use bevy_egui::{EguiContexts, EguiPlugin, EguiPrimaryContextPass, egui};
 use era_automation::{
     consts::CHUNK_LOAD_RADIUS,
     map::{

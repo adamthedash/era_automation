@@ -139,7 +139,18 @@ pub fn create_chunks(
         let chunk = commands.spawn((
             *pos,
             Transform::from_translation(
-                (pos.0.as_vec2() * CHUNK_SIZE.as_vec2() * TILE_DISPLAY_SIZE.as_vec2()).extend(0.),
+                (
+                    (
+                        (
+                        pos.0.as_vec2() 
+                        // +0.5 chunks so TileMapChunk is rendered from its origin
+                        + Vec2::splat(0.5)
+                    ) * CHUNK_SIZE.as_vec2() 
+                    // -0.5 tiles so resource sprites are aligned properly
+                    - Vec2::splat(0.5)
+                )
+                * TILE_DISPLAY_SIZE.as_vec2())
+                .extend(0.),
             ),
             Visibility::default(),
             // Terrain data
