@@ -2285,6 +2285,7 @@ dependencies = [
  "bevy",
  "bevy_egui",
  "libnoise",
+ "num_enum",
  "rand 0.9.2",
 ]
 

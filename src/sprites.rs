@@ -1,4 +1,5 @@
 use bevy::{prelude::*, sprite_render::TilemapChunk};
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::consts::TILE_RAW_SIZE;
 
@@ -12,7 +13,7 @@ impl Plugin for SpritePlugin {
 }
 
 /// Indexes into terrain_sprites.png
-#[derive(Component, Clone, Copy)]
+#[derive(Component, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, Eq)]
 #[repr(usize)]
 pub enum TerrainSprite {
     Grass,

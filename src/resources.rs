@@ -1,11 +1,12 @@
-use bevy::{platform::collections::HashMap, prelude::*};
+use bevy::{platform::collections::HashMap, prelude::*, sprite_render::TilemapChunkTileData};
+use num_enum::TryFromPrimitive;
 use rand::random_bool;
 
 use crate::{
     consts::{CHUNK_SIZE, RESOURCE_DENSITY_BUSH, RESOURCE_DENSITY_LOG},
-    map::{ChunkCreated, TilePos},
+    map::{ChunkCreated, ChunkLUT, TilePos},
     player::Targettable,
-    sprites::{ResourceSprite, SpriteSheets},
+    sprites::{ResourceSprite, SpriteSheets, TerrainSprite},
     utils,
 };
 
@@ -35,6 +36,8 @@ fn spawn_resources(
     mut commands: Commands,
     mut resources: ResMut<ResourceNodes>,
     sprite_sheet: Res<SpriteSheets>,
+    chunk_lut: Res<ChunkLUT>,
+    tile_data: Query<&TilemapChunkTileData>,
 ) {
     let choices = [
         (ResourceSprite::Log, ResourceType::Wood),
@@ -45,6 +48,10 @@ fn spawn_resources(
 
     let chunk_tile_pos = event.0.as_tile_pos();
 
+    let tile_data = tile_data
+        .get(chunk_lut.0[&event.0])
+        .expect("Chunk entity should exist at this point");
+
     info!(
         "Spawning resources for chunk: {:?}, pos {:?}",
         event.0.0, chunk_tile_pos.0
@@ -52,6 +59,18 @@ fn spawn_resources(
     for y in 0..CHUNK_SIZE.y {
         for x in 0..CHUNK_SIZE.x {
             if random_bool(total_weight) {
+                let terrain = tile_data[((CHUNK_SIZE.x - y - 1) * CHUNK_SIZE.x + x) as usize];
+                if terrain
+                    .map(|t| {
+                        TerrainSprite::try_from(t.tileset_index as usize)
+                            .expect("Invalid index for TerrainSprite Enum")
+                    })
+                    .is_none_or(|t| t != TerrainSprite::Grass)
+                {
+                    // Resources can only spawn on grass
+                    continue;
+                }
+
                 let tile_pos = TilePos(chunk_tile_pos.0 + IVec2::new(x as i32, y as i32));
 
                 let (sprite, res_type) = *utils::rand::choice(&choices, &weights);
