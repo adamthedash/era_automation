@@ -142,6 +142,14 @@ fn unhighlight_target(
 
 #[derive(Component)]
 pub struct HeldItem;
+
+#[derive(Event, Debug)]
+pub struct HarvestEvent {
+    pub resource_type: ResourceType,
+    pub amount: usize,
+    // TODO: Node type / position?
+}
+
 /// Pick up a resource and put it in the player's hand
 fn pickup_resource(
     mut commands: Commands,
@@ -191,6 +199,11 @@ fn pickup_resource(
                 // Player has only picked up some of it
                 amount.0 -= pickup_amount;
             }
+
+            commands.trigger(HarvestEvent {
+                resource_type: *res_type,
+                amount: pickup_amount,
+            });
         }
     }
 }
@@ -332,5 +345,10 @@ fn pickup_water(
                 ..Default::default()
             },
         ));
+    });
+
+    commands.trigger(HarvestEvent {
+        resource_type: ResourceType::Water,
+        amount: RESOURCE_PICKUP_AMOUNT,
     });
 }

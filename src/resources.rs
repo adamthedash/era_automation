@@ -20,7 +20,7 @@ impl Plugin for ResourcePlugin {
     }
 }
 
-#[derive(Component, Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Component, Clone, Copy, Hash, PartialEq, Eq, Debug)]
 pub enum ResourceType {
     Wood,
     Food,

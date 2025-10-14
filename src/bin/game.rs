@@ -1,7 +1,7 @@
 use bevy::prelude::*;
-
 use era_automation::{
     consts::CHUNK_LOAD_RADIUS,
+    knowledge::KnowledgePlugin,
     map::{ChunkLUT, ChunkPos, CreateChunk, MapPlugin},
     player::{Player, PlayerPlugin},
     resources::ResourcePlugin,
@@ -17,6 +17,7 @@ fn main() {
         .add_plugins(VillagePlugin)
         .add_plugins(PlayerPlugin)
         .add_plugins(ResourcePlugin)
+        .add_plugins(KnowledgePlugin)
         .add_systems(Update, spawn_chunks)
         .run();
 }
