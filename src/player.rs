@@ -26,6 +26,7 @@ impl Plugin for PlayerPlugin {
                     pickup_resource,
                     check_near_water,
                     show_water_icon,
+                    pickup_water,
                 ),
             )
             .add_observer(highlight_target)
@@ -282,4 +283,54 @@ fn show_water_icon(
         // Despawn the icon
         commands.entity(*entity).despawn();
     }
+}
+
+/// Pick up some water from an infinite source
+fn pickup_water(
+    mut commands: Commands,
+    player: Single<(Entity, &Transform), (With<Player>, With<NearWater>)>,
+    inputs: Res<ButtonInput<KeyCode>>,
+    targets: Query<(), With<Targetted>>,
+    held_item: Option<Single<(), With<HeldItem>>>,
+    sprite_sheets: Res<SpriteSheets>,
+) {
+    if !inputs.pressed(KeyCode::Space) {
+        return;
+    }
+
+    if held_item.is_some() {
+        // Already holding something
+        return;
+    }
+
+    if !targets.is_empty() {
+        // Targets take precedence
+        return;
+    }
+
+    // Add item to player
+    commands.entity(player.0).with_children(|parent| {
+        parent.spawn((
+            // Game data
+            ResourceType::Water,
+            ResourceAmount(RESOURCE_PICKUP_AMOUNT),
+            HeldItem,
+            // Render
+            Transform::from_translation(
+                (Vec2::splat(0.5) * TILE_DISPLAY_SIZE.as_vec2()
+                            // Need to un-scale so offset is ok
+                            / player.1.scale.truncate())
+                // Z == 1 for held items
+                .extend(1.),
+            ),
+            Sprite {
+                image: sprite_sheets.resources.image.clone(),
+                texture_atlas: Some(TextureAtlas {
+                    layout: sprite_sheets.resources.layout.clone(),
+                    index: ResourceSprite::Water as usize,
+                }),
+                ..Default::default()
+            },
+        ));
+    });
 }

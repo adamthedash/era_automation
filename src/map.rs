@@ -5,7 +5,7 @@ use bevy::{
 };
 
 use crate::{
-    consts::{CHUNK_SIZE, STARTING_RADIUS, TILE_DISPLAY_SIZE, TILE_RAW_SIZE},
+    consts::{CHUNK_SIZE, TERRAIN_STARTING_RADIUS, TILE_DISPLAY_SIZE, TILE_RAW_SIZE},
     sprites::TerrainSprite,
     utils::{
         math::lerp,
@@ -94,13 +94,13 @@ impl WorldGenerator {
                 let mut sample = self.terrain.sample([pos.x as f64, pos.y as f64]);
 
                 let distance_from_centre = pos.length_squared();
-                if distance_from_centre < STARTING_RADIUS.pow(2) {
+                if distance_from_centre < TERRAIN_STARTING_RADIUS.pow(2) {
                     // Ensure the starting zone isn't water by biasing towards grass
 
                     sample = lerp(
                         1.,
                         sample,
-                        distance_from_centre.isqrt() as f64 / STARTING_RADIUS as f64,
+                        distance_from_centre.isqrt() as f64 / TERRAIN_STARTING_RADIUS as f64,
                     );
                 }
 

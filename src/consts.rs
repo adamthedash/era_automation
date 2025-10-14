@@ -26,8 +26,10 @@ pub const Z_TERRAIN: f32 = 0.;
 pub const Z_RESOURCES: f32 = 1.;
 pub const Z_PLAYER: f32 = 2.;
 
-/// Tiles around the starting point which are handled differently
-pub const STARTING_RADIUS: i32 = 25;
+/// Tiles around the starting point which can't be water terrain
+pub const TERRAIN_STARTING_RADIUS: i32 = 25;
+/// Tiles around the starting point which can't spawn resource nodes
+pub const RESOURCE_STARTING_RADIUS: i32 = 5;
 
 /// How much the player picks up at once
 pub const RESOURCE_PICKUP_AMOUNT: usize = 1;
