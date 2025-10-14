@@ -6,8 +6,8 @@ use bevy::{
 
 use crate::{
     consts::{
-        PLAYER_REACH, PLAYER_SPEED, RESOURCE_PICKUP_AMOUNT, TILE_DISPLAY_SIZE,
-        TILE_RAW_SIZE, Z_PLAYER,
+        PLAYER_REACH, PLAYER_SPEED, RESOURCE_PICKUP_AMOUNT, TILE_DISPLAY_SIZE, TILE_RAW_SIZE,
+        Z_PLAYER,
     },
     map::{ChunkLUT, TerrainData, TilePos, WorldPos},
     resources::{ResourceAmount, ResourceMarker, ResourceType},
@@ -247,12 +247,13 @@ fn show_water_icon(
     player: Single<(Entity, Option<&NearWater>, &Transform), With<Player>>,
     targets: Query<(), With<Targetted>>,
     water_icon: Option<Single<Entity, With<WaterIcon>>>,
+    held_item: Query<(), With<HeldItem>>,
     mut commands: Commands,
     sprite_sheets: Res<SpriteSheets>,
 ) {
     let (player, near_water, transform) = *player;
 
-    let show_icon = targets.is_empty() && near_water.is_some();
+    let show_icon = targets.is_empty() && near_water.is_some() && held_item.is_empty();
 
     if show_icon {
         if water_icon.is_none() {
@@ -271,7 +272,7 @@ fn show_water_icon(
                     image: sprite_sheets.resources.image.clone(),
                     texture_atlas: Some(TextureAtlas {
                         layout: sprite_sheets.resources.layout.clone(),
-                        index: ResourceSprite::House as usize,
+                        index: ResourceSprite::Water as usize,
                     }),
                     ..Default::default()
                 },

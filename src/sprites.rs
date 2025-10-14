@@ -19,7 +19,6 @@ pub enum TerrainSprite {
     #[default]
     Grass,
     Water,
-    Blank,
 }
 
 /// After loading the sprite sheet, it must be turned into a 2d image array so the images can be
@@ -52,6 +51,7 @@ pub enum ResourceSprite {
     Log,
     Bush,
     House,
+    Water,
 }
 
 /// entity_sheet.png
