@@ -2,15 +2,14 @@ use bevy::{
     self,
     ecs::{bundle::InsertMode, system::entity_command},
     prelude::*,
-    sprite_render::TilemapChunkTileData,
 };
 
 use crate::{
     consts::{
-        CHUNK_SIZE, PLAYER_REACH, PLAYER_SPEED, RESOURCE_PICKUP_AMOUNT, TILE_DISPLAY_SIZE,
+        PLAYER_REACH, PLAYER_SPEED, RESOURCE_PICKUP_AMOUNT, TILE_DISPLAY_SIZE,
         TILE_RAW_SIZE, Z_PLAYER,
     },
-    map::{ChunkLUT, TilePos, WorldPos},
+    map::{ChunkLUT, TerrainData, TilePos, WorldPos},
     resources::{ResourceAmount, ResourceMarker, ResourceType},
     sprites::{EntitySprite, ResourceSprite, SpriteSheets, TerrainSprite},
 };
@@ -201,7 +200,7 @@ struct NearWater;
 fn check_near_water(
     player: Single<(Entity, &WorldPos), With<Player>>,
     chunks_lut: Res<ChunkLUT>,
-    tile_data: Query<&TilemapChunkTileData>,
+    tile_data: Query<&TerrainData>,
     mut commands: Commands,
 ) {
     let (player_entity, player_pos) = *player;
@@ -231,17 +230,7 @@ fn check_near_water(
         })
         // Check if any are water tiles
         .any(|(offset, tile_data)| {
-            // Check what terrain is on this tile
-            // TODO: Create data layer in terrain so we don't need to work with TileChunk
-            // data directly
-            let terrain =
-                tile_data[((CHUNK_SIZE.y - offset.y - 1) * CHUNK_SIZE.x + offset.x) as usize];
-            terrain
-                .map(|t| {
-                    TerrainSprite::try_from(t.tileset_index as usize)
-                        .expect("Invalid index for TerrainSprite Enum")
-                })
-                .is_some_and(|t| t == TerrainSprite::Water)
+            tile_data.0[offset.y as usize][offset.x as usize] == TerrainSprite::Water
         });
 
     if near_water {
@@ -262,12 +251,6 @@ fn show_water_icon(
     sprite_sheets: Res<SpriteSheets>,
 ) {
     let (player, near_water, transform) = *player;
-
-    info!(
-        "targets {:?}, near_water: {:?}",
-        targets.count(),
-        near_water.is_some()
-    );
 
     let show_icon = targets.is_empty() && near_water.is_some();
 

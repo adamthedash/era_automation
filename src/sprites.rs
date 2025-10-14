@@ -13,9 +13,10 @@ impl Plugin for SpritePlugin {
 }
 
 /// Indexes into terrain_sprites.png
-#[derive(Component, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, Eq)]
+#[derive(Component, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, Eq, Default)]
 #[repr(usize)]
 pub enum TerrainSprite {
+    #[default]
     Grass,
     Water,
     Blank,

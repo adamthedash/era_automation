@@ -17,7 +17,10 @@ pub struct MapPlugin;
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, init_world_gen)
-            .add_systems(Update, (create_chunks, update_transforms))
+            .add_systems(
+                Update,
+                (create_chunks, update_transforms, update_tilemap_data),
+            )
             .init_resource::<ChunkLUT>()
             .add_message::<CreateChunk>();
     }
@@ -36,7 +39,7 @@ impl TilePos {
     }
 
     pub fn to_chunk_offset(&self) -> (ChunkPos, UVec2) {
-        let chunk = ChunkPos(self.0 / CHUNK_SIZE.as_ivec2());
+        let chunk = ChunkPos(self.0.div_euclid(CHUNK_SIZE.as_ivec2()));
         let offset = self.0.rem_euclid(CHUNK_SIZE.as_ivec2()).as_uvec2();
 
         (chunk, offset)
@@ -70,18 +73,21 @@ impl WorldPos {
     }
 }
 
+/// Game data friendly storage for terrain tiles
+#[derive(Component, Default)]
+pub struct TerrainData(pub [[TerrainSprite; CHUNK_SIZE.x as usize]; CHUNK_SIZE.y as usize]);
+
 /// Random generation for everything in the world
 #[derive(Resource)]
 pub struct WorldGenerator {
     pub terrain: Box<dyn MyGenerator<2>>,
 }
 impl WorldGenerator {
-    fn generate_terrain(&self, pos: ChunkPos) -> TilemapChunkTileData {
-        let mut data = Vec::with_capacity(CHUNK_SIZE.element_product() as usize);
+    fn generate_terrain(&self, pos: ChunkPos) -> TerrainData {
+        let mut data = TerrainData::default();
 
         let world_pos = pos.as_tile_pos();
-        // Reverse Y direction as tilemap draws from top to bottom
-        for yo in (0..CHUNK_SIZE.y).rev() {
+        for yo in 0..CHUNK_SIZE.y {
             for xo in 0..CHUNK_SIZE.x {
                 let pos = world_pos.0 + UVec2::new(xo, yo).as_ivec2();
 
@@ -104,15 +110,11 @@ impl WorldGenerator {
                     _ => unreachable!("Generated sample with value: {sample}"),
                 };
 
-                data.push(tile);
+                data.0[yo as usize][xo as usize] = tile;
             }
         }
 
-        TilemapChunkTileData(
-            data.into_iter()
-                .map(|sprite| Some(TileData::from_tileset_index(sprite as u16)))
-                .collect(),
-        )
+        data
     }
 }
 
@@ -147,28 +149,23 @@ pub fn create_chunks(
         let mut chunk = commands.spawn((
             *pos,
             Transform::from_translation(
-                (
-                    (
-                        (
-                        pos.0.as_vec2() 
-                        // +0.5 chunks so TileMapChunk is rendered from its origin
-                        + Vec2::splat(0.5)
-                    ) * CHUNK_SIZE.as_vec2() 
-                    // -0.5 tiles so resource sprites are aligned properly
-                    - Vec2::splat(0.5)
-                )
-                * TILE_DISPLAY_SIZE.as_vec2())
+                // +0.5 chunks so TileMapChunk is rendered from its origin
+                // -0.5 tiles so resource sprites are aligned properly
+                (((pos.0.as_vec2() + Vec2::splat(0.5)) * CHUNK_SIZE.as_vec2() - Vec2::splat(0.5))
+                    * TILE_DISPLAY_SIZE.as_vec2())
                 .extend(0.),
             ),
             Visibility::default(),
             // Terrain data
+            generator.generate_terrain(*pos),
+            // Render
             TilemapChunk {
                 chunk_size: CHUNK_SIZE,
                 tile_display_size: TILE_DISPLAY_SIZE,
                 tileset: asset_server.load("terrain_sheet.png"),
                 ..Default::default()
             },
-            generator.generate_terrain(*pos),
+            TilemapChunkTileData(vec![None; CHUNK_SIZE.element_product() as usize]),
         ));
 
         chunk_lut.0.insert(*pos, chunk.id());
@@ -181,5 +178,21 @@ pub fn update_transforms(query: Query<(&WorldPos, &mut Transform), Changed<World
     for (world_pos, mut transform) in query {
         let new_transform = world_pos.as_transform(transform.translation.z);
         transform.translation = new_transform.translation;
+    }
+}
+
+/// Sync terrain game data to the tilemap for rendering
+pub fn update_tilemap_data(
+    query: Query<(&TerrainData, &mut TilemapChunkTileData), Changed<TerrainData>>,
+) {
+    for (tile_data, mut tilemap_data) in query {
+        for (i, row) in tile_data.0.iter().enumerate() {
+            for (j, &terrain) in row.iter().enumerate() {
+                //
+
+                let index = (CHUNK_SIZE.y as usize - i - 1) * CHUNK_SIZE.x as usize + j;
+                tilemap_data[index] = Some(TileData::from_tileset_index(terrain as u16));
+            }
+        }
     }
 }
