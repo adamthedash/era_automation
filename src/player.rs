@@ -10,7 +10,7 @@ use crate::{
         CHUNK_SIZE, PLAYER_REACH, PLAYER_SPEED, RESOURCE_PICKUP_AMOUNT, TILE_DISPLAY_SIZE,
         TILE_RAW_SIZE, Z_PLAYER,
     },
-    map::{ChunkLUT, ChunkPos, TilePos, WorldPos},
+    map::{ChunkLUT, TilePos, WorldPos},
     resources::{ResourceAmount, ResourceMarker, ResourceType},
     sprites::{EntitySprite, ResourceSprite, SpriteSheets, TerrainSprite},
 };
@@ -262,6 +262,12 @@ fn show_water_icon(
     sprite_sheets: Res<SpriteSheets>,
 ) {
     let (player, near_water, transform) = *player;
+
+    info!(
+        "targets {:?}, near_water: {:?}",
+        targets.count(),
+        near_water.is_some()
+    );
 
     let show_icon = targets.is_empty() && near_water.is_some();
 

@@ -5,7 +5,7 @@ use crate::{
     consts::{
         CHUNK_SIZE, RESOURCE_DENSITY_BUSH, RESOURCE_DENSITY_LOG, RESOURCE_SPAWN_AMOUNT, Z_RESOURCES,
     },
-    map::{ChunkCreated, ChunkLUT, TilePos},
+    map::{ChunkCreated, ChunkPos, TilePos},
     player::Targettable,
     sprites::{ResourceSprite, SpriteSheets, TerrainSprite},
     utils,
@@ -42,8 +42,7 @@ fn spawn_resources(
     mut commands: Commands,
     mut resources: ResMut<ResourceNodes>,
     sprite_sheet: Res<SpriteSheets>,
-    chunk_lut: Res<ChunkLUT>,
-    tile_data: Query<&TilemapChunkTileData>,
+    chunks: Query<(&ChunkPos, &TilemapChunkTileData)>,
 ) {
     let choices = [
         (ResourceSprite::Log, ResourceType::Wood),
@@ -52,16 +51,13 @@ fn spawn_resources(
     let weights = [RESOURCE_DENSITY_LOG, RESOURCE_DENSITY_BUSH];
     let total_weight = weights.iter().sum::<f32>().min(1.) as f64;
 
-    let chunk_tile_pos = event.0.as_tile_pos();
-
-    let tile_data = tile_data
-        .get(chunk_lut.0[&event.0])
+    let (chunk_pos, tile_data) = chunks
+        .get(event.event_target())
         .expect("Chunk entity should exist at this point");
 
-    info!(
-        "Spawning resources for chunk: {:?}, pos {:?}",
-        event.0.0, chunk_tile_pos.0
-    );
+    let chunk_tile_pos = chunk_pos.as_tile_pos();
+
+    info!("Spawning resources for chunk: {:?}", chunk_pos.0);
     for y in 0..CHUNK_SIZE.y {
         for x in 0..CHUNK_SIZE.x {
             if random_bool(total_weight) {

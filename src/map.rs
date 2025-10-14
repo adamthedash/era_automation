@@ -131,8 +131,8 @@ pub struct ChunkLUT(pub HashMap<ChunkPos, Entity>);
 pub struct CreateChunk(pub ChunkPos);
 
 /// Event emitted after a chunk is created
-#[derive(Event)]
-pub struct ChunkCreated(pub ChunkPos);
+#[derive(EntityEvent)]
+pub struct ChunkCreated(Entity);
 
 /// Initialises a new chunk at a given position
 pub fn create_chunks(
@@ -143,7 +143,8 @@ pub fn create_chunks(
     generator: Res<WorldGenerator>,
 ) {
     for CreateChunk(pos) in messages.read() {
-        let chunk = commands.spawn((
+        info!("Spawning chunk entity: {:?}", pos.0);
+        let mut chunk = commands.spawn((
             *pos,
             Transform::from_translation(
                 (
@@ -171,7 +172,7 @@ pub fn create_chunks(
         ));
 
         chunk_lut.0.insert(*pos, chunk.id());
-        commands.trigger(ChunkCreated(*pos));
+        chunk.trigger(ChunkCreated);
     }
 }
 
