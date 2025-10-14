@@ -52,6 +52,13 @@ pub enum ResourceSprite {
     Bush,
     House,
     Water,
+    Bowl,
+}
+
+impl From<ResourceSprite> for usize {
+    fn from(val: ResourceSprite) -> Self {
+        val as usize
+    }
 }
 
 /// entity_sheet.png

@@ -25,6 +25,20 @@ pub enum ResourceType {
     Wood,
     Food,
     Water,
+    /// TODO: Move this to dedicated items enum
+    Bowl,
+}
+
+impl ResourceType {
+    /// Get the corresponding sprite for this resource
+    pub fn sprite(&self) -> ResourceSprite {
+        match self {
+            ResourceType::Wood => ResourceSprite::Log,
+            ResourceType::Food => ResourceSprite::Bush,
+            ResourceType::Water => ResourceSprite::Water,
+            ResourceType::Bowl => ResourceSprite::Bowl,
+        }
+    }
 }
 
 /// The amount of resource left in a node

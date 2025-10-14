@@ -12,7 +12,8 @@ use crate::{
 pub struct VillagePlugin;
 impl Plugin for VillagePlugin {
     fn build(&self, app: &mut bevy::app::App) {
-        app.add_systems(Startup, (setup_village, setup_resource_display).chain())
+        app.init_resource::<StockpileLut>()
+            .add_systems(Startup, (setup_village, setup_resource_display).chain())
             .add_systems(Startup, spawn_village_centre)
             .add_systems(
                 Update,
@@ -22,7 +23,7 @@ impl Plugin for VillagePlugin {
 }
 
 #[derive(Component)]
-pub struct ResourceStockpile(f32);
+pub struct ResourceStockpile(pub f32);
 
 /// Resource drain rate per second
 #[derive(Component)]
@@ -31,26 +32,22 @@ pub struct ResourceDrainRate(f32);
 #[derive(Component)]
 pub struct ResourceName(String);
 
+#[derive(Resource, Default)]
+pub struct StockpileLut(pub HashMap<ResourceType, Entity>);
+
 /// Initialise the starting resource stockpiles
-pub fn setup_village(mut commands: Commands) {
-    commands.spawn((
-        ResourceName("Wood".to_string()),
-        ResourceDrainRate(1. / 6.),
-        ResourceStockpile(100.),
-        ResourceType::Wood,
-    ));
-    commands.spawn((
-        ResourceName("Food".to_string()),
-        ResourceDrainRate(1. / 6.),
-        ResourceStockpile(100.),
-        ResourceType::Food,
-    ));
-    commands.spawn((
-        ResourceName("Water".to_string()),
-        ResourceDrainRate(1. / 6.),
-        ResourceStockpile(100.),
-        ResourceType::Water,
-    ));
+pub fn setup_village(mut commands: Commands, mut lut: ResMut<StockpileLut>) {
+    use ResourceType::*;
+    for res_type in [Wood, Food, Water] {
+        let entity = commands.spawn((
+            res_type,
+            ResourceName(format!("{res_type:?}")),
+            ResourceDrainRate(1. / 6.),
+            ResourceStockpile(100.),
+        ));
+
+        lut.0.insert(res_type, entity.id());
+    }
 }
 
 /// Regular ticking of resources
@@ -114,8 +111,9 @@ pub fn update_resource_display(
     }
 }
 
+/// Marker for village building
 #[derive(Component)]
-struct VillageCentre;
+pub struct VillageCentre;
 /// Spawn the village centre that's used to deposit items
 fn spawn_village_centre(mut commands: Commands, sprite_sheet: Res<SpriteSheets>) {
     let pos = TilePos(IVec2::ZERO);

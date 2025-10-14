@@ -1,6 +1,6 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 
-use crate::{player::HarvestEvent, resources::ResourceType};
+use crate::{crafting::Recipe, player::HarvestEvent, resources::ResourceType};
 
 pub struct KnowledgePlugin;
 impl Plugin for KnowledgePlugin {
@@ -13,10 +13,10 @@ impl Plugin for KnowledgePlugin {
 }
 
 #[derive(Component)]
-struct Unlocked;
+pub struct Unlocked;
 
 #[derive(Component, Debug)]
-struct Name(String);
+pub struct UnlockName(pub String);
 
 enum UnlockRequirement {
     TotalGathered {
@@ -31,7 +31,7 @@ struct UnlockRequirements(Vec<UnlockRequirement>);
 /// TODO: Move to data file
 fn init_knowledge(mut commands: Commands) {
     commands.spawn((
-        Name("Bowl".to_string()),
+        UnlockName("Bowl".to_string()),
         UnlockRequirements(vec![
             UnlockRequirement::TotalGathered {
                 resource: ResourceType::Wood,
@@ -42,9 +42,13 @@ fn init_knowledge(mut commands: Commands) {
                 amount: 0,
             },
         ]),
+        Recipe {
+            reqs: vec![(ResourceType::Wood, 5)],
+            product: ResourceType::Bowl,
+        },
     ));
     commands.spawn((
-        Name("Plant Watering".to_string()),
+        UnlockName("Plant Watering".to_string()),
         UnlockRequirements(vec![
             UnlockRequirement::TotalGathered {
                 resource: ResourceType::Food,
@@ -65,7 +69,7 @@ pub struct UnlockEvent {
 
 /// Checks all of the knowledge and unlocks ones that have met their requirements
 fn check_unlocks(
-    query: Query<(Entity, &UnlockRequirements, &Name), Without<Unlocked>>,
+    query: Query<(Entity, &UnlockRequirements, &UnlockName), Without<Unlocked>>,
     stats: Res<GatheringStatistics>,
     mut commands: Commands,
 ) {

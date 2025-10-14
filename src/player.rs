@@ -7,11 +7,11 @@ use bevy::{
 use crate::{
     consts::{
         PLAYER_REACH, PLAYER_SPEED, RESOURCE_PICKUP_AMOUNT, TILE_DISPLAY_SIZE, TILE_RAW_SIZE,
-        Z_PLAYER,
+        Z_HELD_ITEM, Z_PLAYER,
     },
     map::{ChunkLUT, TerrainData, TilePos, WorldPos},
     resources::{ResourceAmount, ResourceMarker, ResourceType},
-    sprites::{EntitySprite, ResourceSprite, SpriteSheets, TerrainSprite},
+    sprites::{EntitySprite, ResourceSprite, SpriteSheet, SpriteSheets, TerrainSprite},
 };
 
 pub struct PlayerPlugin;
@@ -156,10 +156,11 @@ fn pickup_resource(
     player: Single<(Entity, &Transform), With<Player>>,
     inputs: Res<ButtonInput<KeyCode>>,
     mut targetted_resources: Query<
-        (Entity, &Sprite, &ResourceType, &mut ResourceAmount),
+        (Entity, &ResourceType, &mut ResourceAmount),
         (With<ResourceMarker>, With<Targetted>),
     >,
     held_item: Option<Single<(), With<HeldItem>>>,
+    sprite_sheets: Res<SpriteSheets>,
 ) {
     if inputs.pressed(KeyCode::Space) {
         if held_item.is_some() {
@@ -167,8 +168,7 @@ fn pickup_resource(
             return;
         }
 
-        if let Some((resource_entity, sprite, res_type, mut amount)) =
-            targetted_resources.iter_mut().next()
+        if let Some((resource_entity, res_type, mut amount)) = targetted_resources.iter_mut().next()
         {
             let pickup_amount = RESOURCE_PICKUP_AMOUNT.min(amount.0);
 
@@ -178,16 +178,7 @@ fn pickup_resource(
                     // Game data
                     *res_type,
                     ResourceAmount(pickup_amount),
-                    HeldItem,
-                    // Render
-                    Transform::from_translation(
-                        (Vec2::splat(0.5) * TILE_DISPLAY_SIZE.as_vec2()
-                            // Need to un-scale so offset is ok
-                            / player.1.scale.truncate())
-                        // Z == 1 for held items
-                        .extend(1.),
-                    ),
-                    sprite.clone(),
+                    held_item_bundle(res_type.sprite(), &sprite_sheets.resources, player.1),
                 ));
             });
 
@@ -298,6 +289,31 @@ fn show_water_icon(
     }
 }
 
+/// Bundle of components for spawning a held item for the the player
+pub fn held_item_bundle(
+    sprite: impl Into<usize>,
+    sprite_sheet: &SpriteSheet,
+    player_transform: &Transform,
+) -> impl Bundle {
+    (
+        HeldItem,
+        // Render
+        Transform::from_translation(
+            // Need to un-scale so offset is ok
+            (Vec2::splat(0.5) * TILE_DISPLAY_SIZE.as_vec2() / player_transform.scale.truncate())
+                .extend(Z_HELD_ITEM),
+        ),
+        Sprite {
+            image: sprite_sheet.image.clone(),
+            texture_atlas: Some(TextureAtlas {
+                layout: sprite_sheet.layout.clone(),
+                index: sprite.into(),
+            }),
+            ..Default::default()
+        },
+    )
+}
+
 /// Pick up some water from an infinite source
 fn pickup_water(
     mut commands: Commands,
@@ -327,23 +343,7 @@ fn pickup_water(
             // Game data
             ResourceType::Water,
             ResourceAmount(RESOURCE_PICKUP_AMOUNT),
-            HeldItem,
-            // Render
-            Transform::from_translation(
-                (Vec2::splat(0.5) * TILE_DISPLAY_SIZE.as_vec2()
-                            // Need to un-scale so offset is ok
-                            / player.1.scale.truncate())
-                // Z == 1 for held items
-                .extend(1.),
-            ),
-            Sprite {
-                image: sprite_sheets.resources.image.clone(),
-                texture_atlas: Some(TextureAtlas {
-                    layout: sprite_sheets.resources.layout.clone(),
-                    index: ResourceSprite::Water as usize,
-                }),
-                ..Default::default()
-            },
+            held_item_bundle(ResourceSprite::Water, &sprite_sheets.resources, player.1),
         ));
     });
 

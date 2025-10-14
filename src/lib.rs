@@ -2,6 +2,7 @@
 #![feature(iterator_try_collect)]
 #![allow(clippy::type_complexity)]
 pub mod consts;
+pub mod crafting;
 pub mod knowledge;
 pub mod map;
 pub mod notification;
