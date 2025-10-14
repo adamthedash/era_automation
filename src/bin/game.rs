@@ -3,6 +3,7 @@ use era_automation::{
     consts::CHUNK_LOAD_RADIUS,
     knowledge::KnowledgePlugin,
     map::{ChunkLUT, ChunkPos, CreateChunk, MapPlugin},
+    notification::NotificationPlugin,
     player::{Player, PlayerPlugin},
     resources::ResourcePlugin,
     sprites::SpritePlugin,
@@ -18,6 +19,7 @@ fn main() {
         .add_plugins(PlayerPlugin)
         .add_plugins(ResourcePlugin)
         .add_plugins(KnowledgePlugin)
+        .add_plugins(NotificationPlugin)
         .add_systems(Update, spawn_chunks)
         .run();
 }

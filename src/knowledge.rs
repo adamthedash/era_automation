@@ -35,11 +35,11 @@ fn init_knowledge(mut commands: Commands) {
         UnlockRequirements(vec![
             UnlockRequirement::TotalGathered {
                 resource: ResourceType::Wood,
-                amount: 2,
+                amount: 1,
             },
             UnlockRequirement::TotalGathered {
                 resource: ResourceType::Water,
-                amount: 2,
+                amount: 0,
             },
         ]),
     ));
@@ -58,6 +58,11 @@ fn init_knowledge(mut commands: Commands) {
     ));
 }
 
+#[derive(Event)]
+pub struct UnlockEvent {
+    pub name: String,
+}
+
 /// Checks all of the knowledge and unlocks ones that have met their requirements
 fn check_unlocks(
     query: Query<(Entity, &UnlockRequirements, &Name), Without<Unlocked>>,
@@ -74,6 +79,9 @@ fn check_unlocks(
             // Add the Unlocked tag
             info!("Unlocked knowledge: {:?}", name);
             commands.entity(entity).insert(Unlocked);
+            commands.trigger(UnlockEvent {
+                name: name.0.clone(),
+            });
         }
     }
 }
