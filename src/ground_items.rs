@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{
     consts::{GROUND_ITEM_BOB_HEIGHT, GROUND_ITEM_BOB_SPEED, Z_GROUND_ITEM},
     map::WorldPos,
-    player::{Player, Targettable},
+    player::{HeldItem, Player, Targettable},
     sprites::{ResourceSprite, SpriteSheets},
 };
 
@@ -56,28 +56,35 @@ fn animate_items(
 
 /// Drop an item on the ground
 fn drop_item(
-    player: Single<&WorldPos, With<Player>>,
+    player_pos: Single<&WorldPos, With<Player>>,
+    held_item: Single<Entity, With<HeldItem>>,
     inputs: Res<ButtonInput<KeyCode>>,
-    sprite_sheets: Res<SpriteSheets>,
     mut commands: Commands,
 ) {
-    if inputs.just_pressed(KeyCode::KeyE) {
-        commands.spawn((
-            GroundItem,
-            **player,
-            Targettable,
-            // Animation
-            AnimationCycleTime(GROUND_ITEM_BOB_SPEED),
-            // Render
-            player.as_transform(Z_GROUND_ITEM),
-            Sprite {
-                image: sprite_sheets.resources.image.clone(),
-                texture_atlas: Some(TextureAtlas {
-                    layout: sprite_sheets.resources.layout.clone(),
-                    index: ResourceSprite::Bowl as usize,
-                }),
-                ..Default::default()
-            },
-        ));
+    if !inputs.just_pressed(KeyCode::KeyE) {
+        return;
     }
+
+    // Move entity from player children to world
+    let mut item = commands.entity(*held_item);
+    item.remove::<ChildOf>();
+
+    // Remove holding related components
+    // TODO: Move this to a bundle
+    item.remove::<HeldItem>();
+
+    // Add ground related components
+    item.insert((
+        // Markers
+        GroundItem,
+        Targettable,
+        // Drop at player's feet
+        **player_pos,
+        // Animation
+        AnimationCycleTime(GROUND_ITEM_BOB_SPEED),
+        // Render
+        player_pos.as_transform(Z_GROUND_ITEM),
+    ));
 }
+
+fn pickup_item() {}
