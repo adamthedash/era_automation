@@ -24,7 +24,8 @@ pub const PLAYER_REACH: f32 = 2.;
 /// Z layers for sprite rendering
 pub const Z_TERRAIN: f32 = 0.;
 pub const Z_RESOURCES: f32 = 1.;
-pub const Z_PLAYER: f32 = 2.;
+pub const Z_GROUND_ITEM: f32 = 2.;
+pub const Z_PLAYER: f32 = 3.;
 /// Z relative to Z_PLAYER
 pub const Z_HELD_ITEM: f32 = 1.;
 
@@ -37,3 +38,8 @@ pub const RESOURCE_STARTING_RADIUS: i32 = 5;
 pub const RESOURCE_PICKUP_AMOUNT: usize = 1;
 /// How much a resource node spawns with
 pub const RESOURCE_SPAWN_AMOUNT: usize = 2;
+
+/// Amount items bob up/down
+pub const GROUND_ITEM_BOB_HEIGHT: f32 = 0.5;
+/// Time per bob cycle
+pub const GROUND_ITEM_BOB_SPEED: f32 = 2.;
