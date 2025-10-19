@@ -22,7 +22,7 @@ impl Plugin for PlayerPlugin {
                 Update,
                 (
                     move_player,
-                    target_resource,
+                    target_thing,
                     pickup_resource,
                     check_near_water,
                     show_water_icon,
@@ -41,6 +41,10 @@ pub fn setup_player(mut commands: Commands, sprite_sheets: Res<SpriteSheets>) {
     commands.spawn((Camera2d, world_pos, Transform::IDENTITY));
 
     commands.spawn((
+        Player,
+        world_pos,
+        // Render
+        world_pos.as_transform(Z_PLAYER),
         Sprite::from_atlas_image(
             sprite_sheets.entities.image.clone(),
             TextureAtlas {
@@ -48,9 +52,6 @@ pub fn setup_player(mut commands: Commands, sprite_sheets: Res<SpriteSheets>) {
                 index: EntitySprite::Player as usize,
             },
         ),
-        world_pos,
-        world_pos.as_transform(Z_PLAYER),
-        Player,
     ));
 }
 
@@ -86,22 +87,26 @@ pub struct Targettable;
 #[derive(Component)]
 pub struct Targetted;
 /// Targets the closest thing to the player
-fn target_resource(
+fn target_thing(
     mut commands: Commands,
-    player: Single<&Transform, With<Player>>,
-    targettables: Query<(Entity, &TilePos), With<Targettable>>,
+    player: Single<&WorldPos, With<Player>>,
+    targettables: Query<(Entity, Option<&TilePos>, Option<&WorldPos>), With<Targettable>>,
     targetted: Query<Entity, (With<Targettable>, With<Targetted>)>,
 ) {
-    let player_world_pos = WorldPos::from_transform(&player);
-
     let closest = targettables
         .iter()
-        .map(|(entity, tile_pos)| {
-            let distance2 = player_world_pos
-                .0
-                .distance_squared(tile_pos.as_world_pos().0);
+        .map(|(entity, tile_pos, world_pos)| {
+            // Collapse position types
+            let pos = world_pos.copied().unwrap_or_else(|| {
+                tile_pos
+                    .expect("Entity has neither tile or world position")
+                    .as_world_pos()
+            });
 
-            (entity, tile_pos, distance2)
+            // Calculate distance
+            let distance2 = player.0.distance_squared(pos.0);
+
+            (entity, pos, distance2)
         })
         .filter(|(_, _, distance2)| *distance2 <= PLAYER_REACH.powi(2))
         .min_by(|(_, _, d1), (_, _, d2)| d1.total_cmp(d2));

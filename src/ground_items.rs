@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{
     consts::{GROUND_ITEM_BOB_HEIGHT, GROUND_ITEM_BOB_SPEED, Z_GROUND_ITEM},
     map::WorldPos,
-    player::Player,
+    player::{Player, Targettable},
     sprites::{ResourceSprite, SpriteSheets},
 };
 
@@ -65,10 +65,11 @@ fn drop_item(
         commands.spawn((
             GroundItem,
             **player,
-            player.as_transform(Z_GROUND_ITEM),
+            Targettable,
             // Animation
             AnimationCycleTime(GROUND_ITEM_BOB_SPEED),
             // Render
+            player.as_transform(Z_GROUND_ITEM),
             Sprite {
                 image: sprite_sheets.resources.image.clone(),
                 texture_atlas: Some(TextureAtlas {
