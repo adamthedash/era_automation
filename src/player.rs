@@ -12,6 +12,7 @@ use crate::{
     map::{ChunkLUT, TerrainData, TilePos, WorldPos},
     resources::{ResourceAmount, ResourceMarker, ResourceType},
     sprites::{EntitySprite, ResourceSprite, SpriteSheet, SpriteSheets, TerrainSprite},
+    utils::run_if::key_just_pressed,
 };
 
 pub struct PlayerPlugin;
@@ -23,10 +24,10 @@ impl Plugin for PlayerPlugin {
                 (
                     move_player,
                     target_thing,
-                    pickup_resource,
+                    pickup_resource.run_if(key_just_pressed(KeyCode::Space)),
                     check_near_water,
                     show_water_icon,
-                    pickup_water,
+                    pickup_water.run_if(key_just_pressed(KeyCode::Space)),
                 ),
             )
             .add_observer(highlight_target)
@@ -159,7 +160,6 @@ pub struct HarvestEvent {
 fn pickup_resource(
     mut commands: Commands,
     player: Single<(Entity, &Transform), With<Player>>,
-    inputs: Res<ButtonInput<KeyCode>>,
     mut targetted_resources: Query<
         (Entity, &ResourceType, &mut ResourceAmount),
         (With<ResourceMarker>, With<Targetted>),
@@ -167,40 +167,37 @@ fn pickup_resource(
     held_item: Option<Single<(), With<HeldItem>>>,
     sprite_sheets: Res<SpriteSheets>,
 ) {
-    if inputs.pressed(KeyCode::Space) {
-        if held_item.is_some() {
-            // Already holding something
-            return;
+    if held_item.is_some() {
+        // Already holding something
+        return;
+    }
+
+    if let Some((resource_entity, res_type, mut amount)) = targetted_resources.iter_mut().next() {
+        let pickup_amount = RESOURCE_PICKUP_AMOUNT.min(amount.0);
+
+        // Add item to player
+        commands.entity(player.0).with_children(|parent| {
+            parent.spawn((
+                // Game data
+                *res_type,
+                ResourceAmount(pickup_amount),
+                held_item_bundle(res_type.sprite(), &sprite_sheets.resources, player.1),
+            ));
+        });
+
+        // Remove resource if it's depleted
+        if amount.0 == pickup_amount {
+            // Player has grabbed it all, so remove the node
+            commands.entity(resource_entity).despawn();
+        } else {
+            // Player has only picked up some of it
+            amount.0 -= pickup_amount;
         }
 
-        if let Some((resource_entity, res_type, mut amount)) = targetted_resources.iter_mut().next()
-        {
-            let pickup_amount = RESOURCE_PICKUP_AMOUNT.min(amount.0);
-
-            // Add item to player
-            commands.entity(player.0).with_children(|parent| {
-                parent.spawn((
-                    // Game data
-                    *res_type,
-                    ResourceAmount(pickup_amount),
-                    held_item_bundle(res_type.sprite(), &sprite_sheets.resources, player.1),
-                ));
-            });
-
-            // Remove resource if it's depleted
-            if amount.0 == pickup_amount {
-                // Player has grabbed it all, so remove the node
-                commands.entity(resource_entity).despawn();
-            } else {
-                // Player has only picked up some of it
-                amount.0 -= pickup_amount;
-            }
-
-            commands.trigger(HarvestEvent {
-                resource_type: *res_type,
-                amount: pickup_amount,
-            });
-        }
+        commands.trigger(HarvestEvent {
+            resource_type: *res_type,
+            amount: pickup_amount,
+        });
     }
 }
 
@@ -265,8 +262,8 @@ fn show_water_icon(
 
     let show_icon = targets.is_empty() && near_water.is_some() && held_item.is_empty();
 
-    if show_icon {
-        if water_icon.is_none() {
+    match (show_icon, water_icon) {
+        (true, None) => {
             // Spawn icon as child to player
             commands.entity(player).with_child((
                 WaterIcon,
@@ -288,9 +285,11 @@ fn show_water_icon(
                 },
             ));
         }
-    } else if let Some(entity) = water_icon {
-        // Despawn the icon
-        commands.entity(*entity).despawn();
+        (false, Some(entity)) => {
+            // Despawn the icon
+            commands.entity(*entity).despawn();
+        }
+        _ => (),
     }
 }
 
@@ -323,15 +322,10 @@ pub fn held_item_bundle(
 fn pickup_water(
     mut commands: Commands,
     player: Single<(Entity, &Transform), (With<Player>, With<NearWater>)>,
-    inputs: Res<ButtonInput<KeyCode>>,
     targets: Query<(), With<Targetted>>,
     held_item: Option<Single<(), With<HeldItem>>>,
     sprite_sheets: Res<SpriteSheets>,
 ) {
-    if !inputs.pressed(KeyCode::Space) {
-        return;
-    }
-
     if held_item.is_some() {
         // Already holding something
         return;

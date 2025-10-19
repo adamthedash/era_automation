@@ -5,15 +5,20 @@ use bevy::prelude::*;
 use crate::{
     consts::{GROUND_ITEM_BOB_HEIGHT, GROUND_ITEM_BOB_SPEED, Z_GROUND_ITEM},
     map::WorldPos,
-    player::{HeldItem, Player, Targettable},
-    sprites::{ResourceSprite, SpriteSheets},
+    player::{HeldItem, Player, Targettable, Targetted},
+    utils::run_if::key_just_pressed,
 };
 
 pub struct GroundItemPlugin;
 impl Plugin for GroundItemPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, animate_items)
-            .add_systems(Update, drop_item);
+        app.add_systems(
+            Update,
+            (
+                animate_items,
+                drop_item.run_if(key_just_pressed(KeyCode::KeyE)),
+            ),
+        );
     }
 }
 
@@ -58,13 +63,8 @@ fn animate_items(
 fn drop_item(
     player_pos: Single<&WorldPos, With<Player>>,
     held_item: Single<Entity, With<HeldItem>>,
-    inputs: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
 ) {
-    if !inputs.just_pressed(KeyCode::KeyE) {
-        return;
-    }
-
     // Move entity from player children to world
     let mut item = commands.entity(*held_item);
     item.remove::<ChildOf>();
@@ -87,4 +87,12 @@ fn drop_item(
     ));
 }
 
-fn pickup_item() {}
+/// Pick up a nearby item from the ground
+fn pickup_item(
+    ground_item: Single<(), (With<GroundItem>, With<Targetted>)>,
+    held_item: Query<(), With<HeldItem>>,
+) {
+    if !held_item.is_empty() {
+        // Already holding an item
+    }
+}

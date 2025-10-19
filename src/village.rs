@@ -7,6 +7,7 @@ use crate::{
     player::{HeldItem, Targettable, Targetted},
     resources::{ResourceAmount, ResourceType},
     sprites::{ResourceSprite, SpriteSheets},
+    utils::run_if::key_just_pressed,
 };
 
 pub struct VillagePlugin;
@@ -17,7 +18,11 @@ impl Plugin for VillagePlugin {
             .add_systems(Startup, spawn_village_centre)
             .add_systems(
                 Update,
-                (update_resources, update_resource_display, deposit_resource),
+                (
+                    update_resources,
+                    update_resource_display,
+                    deposit_resource.run_if(key_just_pressed(KeyCode::Space)),
+                ),
             );
     }
 }
@@ -136,22 +141,19 @@ fn spawn_village_centre(mut commands: Commands, sprite_sheet: Res<SpriteSheets>)
 /// Deposit a held resource into the village
 fn deposit_resource(
     mut commands: Commands,
-    inputs: Res<ButtonInput<KeyCode>>,
     _village: If<Single<(), (With<VillageCentre>, With<Targetted>)>>,
     items: Query<(Entity, &ResourceType, &ResourceAmount), With<HeldItem>>,
     mut stockpiles: Query<(&mut ResourceStockpile, &ResourceType)>,
 ) {
-    if inputs.pressed(KeyCode::Space) {
-        for (entity, res_type, amount) in items {
-            let (mut stockpile, _) = stockpiles
-                .iter_mut()
-                .find(|(_, stock_type)| *stock_type == res_type)
-                .expect("Stockpile not created");
+    for (entity, res_type, amount) in items {
+        let (mut stockpile, _) = stockpiles
+            .iter_mut()
+            .find(|(_, stock_type)| *stock_type == res_type)
+            .expect("Stockpile not created");
 
-            stockpile.0 += amount.0 as f32;
+        stockpile.0 += amount.0 as f32;
 
-            // Remove the item
-            commands.entity(entity).despawn();
-        }
+        // Remove the item
+        commands.entity(entity).despawn();
     }
 }
