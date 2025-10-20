@@ -9,10 +9,14 @@ use crate::{
         PLAYER_REACH, PLAYER_SPEED, RESOURCE_PICKUP_AMOUNT, TILE_DISPLAY_SIZE, TILE_RAW_SIZE,
         Z_HELD_ITEM, Z_PLAYER,
     },
+    items::ItemType,
     map::{ChunkLUT, TerrainData, TilePos, WorldPos},
-    resources::{ResourceAmount, ResourceMarker, ResourceType},
-    sprites::{EntitySprite, ResourceSprite, SpriteSheet, SpriteSheets, TerrainSprite},
-    utils::run_if::key_just_pressed,
+    resources::{ResourceAmount, ResourceMarker, ResourceNodeType, ResourceType},
+    sprites::{
+        EntitySprite, GetSprite, ItemSprite, ResourceSprite, SpriteSheet, SpriteSheets,
+        TerrainSprite,
+    },
+    utils::run_if::{empty_hands, key_just_pressed},
 };
 
 pub struct PlayerPlugin;
@@ -24,10 +28,15 @@ impl Plugin for PlayerPlugin {
                 (
                     move_player,
                     target_thing,
-                    pickup_resource.run_if(key_just_pressed(KeyCode::Space)),
+                    harvest_resource.run_if(key_just_pressed(KeyCode::Space).and(empty_hands)),
                     check_near_water,
                     show_water_icon,
-                    pickup_water.run_if(key_just_pressed(KeyCode::Space)),
+                    harvest_water.run_if(
+                        key_just_pressed(KeyCode::Space)
+                            .and(empty_hands)
+                            // Targets take precedence
+                            .and(|targets: Query<(), With<Targetted>>| targets.is_empty()),
+                    ),
                 ),
             )
             .add_observer(highlight_target)
@@ -127,7 +136,7 @@ fn target_thing(
     }
 }
 
-/// Make targetted resources bigger
+/// Make targetted things bigger
 fn highlight_target(
     event: On<Add, Targetted>,
     mut transforms: Query<&mut Transform, With<Targetted>>,
@@ -136,7 +145,7 @@ fn highlight_target(
         transform.scale = (1.2 * TILE_DISPLAY_SIZE.as_vec2() / TILE_RAW_SIZE.as_vec2()).extend(1.);
     }
 }
-/// Make untargetted resources smaller
+/// Make untargetted things smaller
 fn unhighlight_target(
     event: On<Remove, Targetted>,
     mut transforms: Query<&mut Transform, Added<Targetted>>,
@@ -151,54 +160,55 @@ pub struct HeldItem;
 
 #[derive(Event, Debug)]
 pub struct HarvestEvent {
-    pub resource_type: ResourceType,
+    pub resource_node: ResourceNodeType,
     pub amount: usize,
     // TODO: Node type / position?
 }
 
 /// Pick up a resource and put it in the player's hand
-fn pickup_resource(
+fn harvest_resource(
     mut commands: Commands,
     player: Single<(Entity, &Transform), With<Player>>,
-    mut targetted_resources: Query<
-        (Entity, &ResourceType, &mut ResourceAmount),
+    mut targetted_resources: Populated<
+        (Entity, &ResourceNodeType, &ItemType, &mut ResourceAmount),
         (With<ResourceMarker>, With<Targetted>),
     >,
-    held_item: Option<Single<(), With<HeldItem>>>,
     sprite_sheets: Res<SpriteSheets>,
 ) {
-    if held_item.is_some() {
-        // Already holding something
-        return;
+    let (resource_entity, node_type, item_type, mut amount) = targetted_resources
+        .iter_mut()
+        .next()
+        .unwrap_or_else(|| unreachable!("Populated query"));
+
+    info!("Harvesting resource: {:?}", node_type);
+
+    let pickup_amount = RESOURCE_PICKUP_AMOUNT.min(amount.0);
+
+    // Add item to player
+    commands.entity(player.0).with_children(|parent| {
+        parent.spawn((
+            // Game data
+            *item_type,
+            ResourceAmount(pickup_amount),
+            held_item_bundle(player.1),
+            // Render
+            item_type.get_sprite(&sprite_sheets),
+        ));
+    });
+
+    // Remove resource if it's depleted
+    if amount.0 == pickup_amount {
+        // Player has grabbed it all, so remove the node
+        commands.entity(resource_entity).despawn();
+    } else {
+        // Player has only picked up some of it
+        amount.0 -= pickup_amount;
     }
 
-    if let Some((resource_entity, res_type, mut amount)) = targetted_resources.iter_mut().next() {
-        let pickup_amount = RESOURCE_PICKUP_AMOUNT.min(amount.0);
-
-        // Add item to player
-        commands.entity(player.0).with_children(|parent| {
-            parent.spawn((
-                // Game data
-                *res_type,
-                ResourceAmount(pickup_amount),
-                held_item_bundle(res_type.sprite(), &sprite_sheets.resources, player.1),
-            ));
-        });
-
-        // Remove resource if it's depleted
-        if amount.0 == pickup_amount {
-            // Player has grabbed it all, so remove the node
-            commands.entity(resource_entity).despawn();
-        } else {
-            // Player has only picked up some of it
-            amount.0 -= pickup_amount;
-        }
-
-        commands.trigger(HarvestEvent {
-            resource_type: *res_type,
-            amount: pickup_amount,
-        });
-    }
+    commands.trigger(HarvestEvent {
+        resource_node: *node_type,
+        amount: pickup_amount,
+    });
 }
 
 #[derive(Component)]
@@ -275,14 +285,7 @@ fn show_water_icon(
                     // Z == 1 for held items
                     .extend(1.),
                 ),
-                Sprite {
-                    image: sprite_sheets.resources.image.clone(),
-                    texture_atlas: Some(TextureAtlas {
-                        layout: sprite_sheets.resources.layout.clone(),
-                        index: ResourceSprite::Water as usize,
-                    }),
-                    ..Default::default()
-                },
+                ItemSprite::Water.get_sprite(&sprite_sheets),
             ));
         }
         (false, Some(entity)) => {
@@ -294,11 +297,7 @@ fn show_water_icon(
 }
 
 /// Bundle of components for spawning a held item for the the player
-pub fn held_item_bundle(
-    sprite: impl Into<usize>,
-    sprite_sheet: &SpriteSheet,
-    player_transform: &Transform,
-) -> impl Bundle {
+pub fn held_item_bundle(player_transform: &Transform) -> impl Bundle {
     (
         HeldItem,
         // Render
@@ -307,47 +306,29 @@ pub fn held_item_bundle(
             (Vec2::splat(0.5) * TILE_DISPLAY_SIZE.as_vec2() / player_transform.scale.truncate())
                 .extend(Z_HELD_ITEM),
         ),
-        Sprite {
-            image: sprite_sheet.image.clone(),
-            texture_atlas: Some(TextureAtlas {
-                layout: sprite_sheet.layout.clone(),
-                index: sprite.into(),
-            }),
-            ..Default::default()
-        },
     )
 }
 
 /// Pick up some water from an infinite source
-fn pickup_water(
+fn harvest_water(
     mut commands: Commands,
     player: Single<(Entity, &Transform), (With<Player>, With<NearWater>)>,
-    targets: Query<(), With<Targetted>>,
-    held_item: Option<Single<(), With<HeldItem>>>,
     sprite_sheets: Res<SpriteSheets>,
 ) {
-    if held_item.is_some() {
-        // Already holding something
-        return;
-    }
-
-    if !targets.is_empty() {
-        // Targets take precedence
-        return;
-    }
-
     // Add item to player
     commands.entity(player.0).with_children(|parent| {
         parent.spawn((
             // Game data
-            ResourceType::Water,
+            ItemType::Water,
             ResourceAmount(RESOURCE_PICKUP_AMOUNT),
-            held_item_bundle(ResourceSprite::Water, &sprite_sheets.resources, player.1),
+            held_item_bundle(player.1),
+            // Render
+            ItemSprite::Water.get_sprite(&sprite_sheets),
         ));
     });
 
     commands.trigger(HarvestEvent {
-        resource_type: ResourceType::Water,
+        resource_node: ResourceNodeType::Water,
         amount: RESOURCE_PICKUP_AMOUNT,
     });
 }

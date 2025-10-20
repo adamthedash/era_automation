@@ -6,9 +6,10 @@ use crate::{
         CHUNK_SIZE, RESOURCE_DENSITY_BUSH, RESOURCE_DENSITY_LOG, RESOURCE_SPAWN_AMOUNT,
         RESOURCE_STARTING_RADIUS, Z_RESOURCES,
     },
+    items::ItemType,
     map::{ChunkCreated, ChunkPos, TerrainData, TilePos},
     player::Targettable,
-    sprites::{ResourceSprite, SpriteSheets, TerrainSprite},
+    sprites::{GetSprite, ResourceSprite, SpriteSheets, TerrainSprite},
     utils,
 };
 
@@ -20,24 +21,35 @@ impl Plugin for ResourcePlugin {
     }
 }
 
+/// The type of resource used by the village
 #[derive(Component, Clone, Copy, Hash, PartialEq, Eq, Debug)]
 pub enum ResourceType {
     Wood,
     Food,
     Water,
-    /// TODO: Move this to dedicated items enum
-    Bowl,
 }
 
-impl ResourceType {
-    /// Get the corresponding sprite for this resource
+/// The type of node resource node placed in the world
+#[derive(Component, Clone, Copy, Hash, PartialEq, Eq, Debug)]
+pub enum ResourceNodeType {
+    Tree,
+    Bush,
+    Water,
+}
+
+impl ResourceNodeType {
     pub fn sprite(&self) -> ResourceSprite {
         match self {
-            ResourceType::Wood => ResourceSprite::Log,
-            ResourceType::Food => ResourceSprite::Bush,
-            ResourceType::Water => ResourceSprite::Water,
-            ResourceType::Bowl => ResourceSprite::Bowl,
+            ResourceNodeType::Tree => ResourceSprite::Tree,
+            ResourceNodeType::Bush => ResourceSprite::Bush,
+            ResourceNodeType::Water => unreachable!("Water node should never be rendered"),
         }
+    }
+}
+
+impl GetSprite for ResourceNodeType {
+    fn get_sprite(self, sprite_sheets: &SpriteSheets) -> Sprite {
+        self.sprite().get_sprite(sprite_sheets)
     }
 }
 
@@ -56,12 +68,12 @@ fn spawn_resources(
     event: On<ChunkCreated>,
     mut commands: Commands,
     mut resources: ResMut<ResourceNodes>,
-    sprite_sheet: Res<SpriteSheets>,
+    sprite_sheets: Res<SpriteSheets>,
     chunks: Query<(&ChunkPos, &TerrainData)>,
 ) {
     let choices = [
-        (ResourceSprite::Log, ResourceType::Wood),
-        (ResourceSprite::Bush, ResourceType::Food),
+        (ResourceNodeType::Tree, ItemType::Log),
+        (ResourceNodeType::Bush, ItemType::Berry),
     ];
     let weights = [RESOURCE_DENSITY_LOG, RESOURCE_DENSITY_BUSH];
     let total_weight = weights.iter().sum::<f32>().min(1.) as f64;
@@ -87,25 +99,19 @@ fn spawn_resources(
                     continue;
                 }
 
-                let (sprite, res_type) = *utils::rand::choice(&choices, &weights);
+                let (node_type, item_type) = *utils::rand::choice(&choices, &weights);
                 let entity = commands.spawn((
                     // Game data
                     tile_pos,
-                    res_type,
+                    item_type,
+                    node_type,
                     // TODO: Resource amount spawn logic
                     ResourceAmount(RESOURCE_SPAWN_AMOUNT),
                     ResourceMarker,
                     Targettable,
                     // Render
-                    Sprite {
-                        image: sprite_sheet.resources.image.clone(),
-                        texture_atlas: Some(TextureAtlas {
-                            layout: sprite_sheet.resources.layout.clone(),
-                            index: sprite as usize,
-                        }),
-                        ..Default::default()
-                    },
                     tile_pos.as_transform(Z_RESOURCES),
+                    node_type.get_sprite(&sprite_sheets),
                 ));
 
                 resources.0.insert(tile_pos, entity.id());

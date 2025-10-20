@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 use crate::{
     consts::Z_RESOURCES,
+    items::ItemType,
     map::TilePos,
     player::{HeldItem, Targettable, Targetted},
     resources::{ResourceAmount, ResourceType},
@@ -21,7 +22,12 @@ impl Plugin for VillagePlugin {
                 (
                     update_resources,
                     update_resource_display,
-                    deposit_resource.run_if(key_just_pressed(KeyCode::Space)),
+                    deposit_resource.run_if(key_just_pressed(KeyCode::Space).and(
+                        // Only run when targetting a village centre
+                        |village: Query<(), (With<VillageCentre>, With<Targetted>)>| {
+                            !village.is_empty()
+                        },
+                    )),
                 ),
             );
     }
@@ -138,22 +144,37 @@ fn spawn_village_centre(mut commands: Commands, sprite_sheet: Res<SpriteSheets>)
     ));
 }
 
-/// Deposit a held resource into the village
+#[derive(Debug, Event)]
+pub struct DepositEvent {
+    pub resource: ResourceType,
+    pub amount: usize,
+}
+
+/// Deposit a held item into the village
 fn deposit_resource(
     mut commands: Commands,
-    _village: If<Single<(), (With<VillageCentre>, With<Targetted>)>>,
-    items: Query<(Entity, &ResourceType, &ResourceAmount), With<HeldItem>>,
+    items: Query<(Entity, &ItemType, &ResourceAmount), With<HeldItem>>,
     mut stockpiles: Query<(&mut ResourceStockpile, &ResourceType)>,
 ) {
-    for (entity, res_type, amount) in items {
+    for (entity, item_type, amount) in items {
+        let Some(resource) = item_type.resource_type() else {
+            // No resource provided by this item
+            continue;
+        };
+
         let (mut stockpile, _) = stockpiles
             .iter_mut()
-            .find(|(_, stock_type)| *stock_type == res_type)
+            .find(|(_, stock_type)| **stock_type == resource)
             .expect("Stockpile not created");
 
         stockpile.0 += amount.0 as f32;
 
         // Remove the item
         commands.entity(entity).despawn();
+
+        commands.trigger(DepositEvent {
+            resource,
+            amount: amount.0,
+        });
     }
 }

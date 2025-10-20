@@ -9,7 +9,7 @@ use crate::{
     },
     map::WorldPos,
     player::{HeldItem, Player, Targettable, Targetted},
-    utils::run_if::key_just_pressed,
+    utils::run_if::{empty_hands, key_just_pressed},
 };
 
 pub struct GroundItemPlugin;
@@ -19,8 +19,7 @@ impl Plugin for GroundItemPlugin {
             Update,
             (
                 animate_items,
-                (drop_item, pickup_item)
-                    .chain()
+                (drop_item, pickup_item.run_if(empty_hands))
                     .run_if(key_just_pressed(KeyCode::KeyE)),
             ),
         );
@@ -70,6 +69,7 @@ fn drop_item(
     held_item: Single<Entity, With<HeldItem>>,
     mut commands: Commands,
 ) {
+    info!("Dropping item");
     // Move entity from player children to world
     let mut item = commands.entity(*held_item);
     item.remove::<ChildOf>();
@@ -95,21 +95,17 @@ fn drop_item(
 /// Pick up a nearby item from the ground
 fn pickup_item(
     ground_item: Single<Entity, (With<GroundItem>, With<Targetted>)>,
-    held_item: Query<(), With<HeldItem>>,
     player: Single<(Entity, &Transform), With<Player>>,
     mut commands: Commands,
 ) {
-    if !held_item.is_empty() {
-        // Already holding an item
-    }
-
+    info!("Picking up item");
     // Move entity from world to player
     let mut item = commands.entity(*ground_item);
     item.insert(ChildOf(player.0));
 
     // Remove ground related components
     // TODO: Move this to a bundle
-    item.remove::<(GroundItem, Targettable, AnimationCycleTime)>();
+    item.remove::<(GroundItem, Targettable, AnimationCycleTime, WorldPos)>();
 
     // Add holding related components
     item.insert((

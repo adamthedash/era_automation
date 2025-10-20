@@ -3,7 +3,9 @@
 #![allow(clippy::type_complexity)]
 pub mod consts;
 pub mod crafting;
+pub mod data;
 pub mod ground_items;
+pub mod items;
 pub mod knowledge;
 pub mod map;
 pub mod notification;

@@ -2,11 +2,12 @@ use bevy::prelude::*;
 
 use crate::{
     consts::PLAYER_REACH,
+    items::ItemType,
     knowledge::Unlocked,
     map::{TilePos, WorldPos},
     player::{HeldItem, Player, held_item_bundle},
     resources::ResourceType,
-    sprites::SpriteSheets,
+    sprites::{GetSprite, SpriteSheets},
     village::{ResourceStockpile, StockpileLut, VillageCentre},
 };
 
@@ -51,7 +52,7 @@ fn check_near_crafting_station(
 #[derive(Component, Clone, Debug)]
 pub struct Recipe {
     pub reqs: Vec<(ResourceType, usize)>,
-    pub product: ResourceType,
+    pub product: ItemType,
 }
 
 #[derive(Component)]
@@ -199,11 +200,8 @@ fn try_craft_recipes(
             // Give item to player
             commands.entity(player).with_child((
                 recipe.product,
-                held_item_bundle(
-                    recipe.product.sprite(),
-                    &sprite_sheets.resources,
-                    player_transform,
-                ),
+                held_item_bundle(player_transform),
+                recipe.product.get_sprite(&sprite_sheets),
             ));
         } else {
             // Not enough resources

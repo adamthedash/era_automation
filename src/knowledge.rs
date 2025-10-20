@@ -1,6 +1,12 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 
-use crate::{crafting::Recipe, player::HarvestEvent, resources::ResourceType};
+use crate::{
+    crafting::Recipe,
+    items::ItemType,
+    player::HarvestEvent,
+    resources::{ResourceNodeType, ResourceType},
+    village::DepositEvent,
+};
 
 pub struct KnowledgePlugin;
 impl Plugin for KnowledgePlugin {
@@ -8,7 +14,8 @@ impl Plugin for KnowledgePlugin {
         app.init_resource::<GatheringStatistics>()
             .add_systems(Startup, init_knowledge)
             .add_systems(Update, check_unlocks)
-            .add_observer(update_statistics);
+            .add_observer(update_harvest_statistics)
+            .add_observer(update_deposit_statistics);
     }
 }
 
@@ -18,14 +25,18 @@ pub struct Unlocked;
 #[derive(Component, Debug)]
 pub struct UnlockName(pub String);
 
-enum UnlockRequirement {
+pub enum UnlockRequirement {
     TotalGathered {
+        resource: ResourceNodeType,
+        amount: usize,
+    },
+    TotalDeposited {
         resource: ResourceType,
         amount: usize,
     },
 }
 #[derive(Component)]
-struct UnlockRequirements(Vec<UnlockRequirement>);
+pub struct UnlockRequirements(pub Vec<UnlockRequirement>);
 
 /// Initialise the knowledge
 /// TODO: Move to data file
@@ -33,28 +44,28 @@ fn init_knowledge(mut commands: Commands) {
     commands.spawn((
         UnlockName("Bowl".to_string()),
         UnlockRequirements(vec![
-            UnlockRequirement::TotalGathered {
+            UnlockRequirement::TotalDeposited {
                 resource: ResourceType::Wood,
                 amount: 1,
             },
-            UnlockRequirement::TotalGathered {
+            UnlockRequirement::TotalDeposited {
                 resource: ResourceType::Water,
                 amount: 0,
             },
         ]),
         Recipe {
             reqs: vec![(ResourceType::Wood, 5)],
-            product: ResourceType::Bowl,
+            product: ItemType::Bowl,
         },
     ));
     commands.spawn((
         UnlockName("Plant Watering".to_string()),
         UnlockRequirements(vec![
-            UnlockRequirement::TotalGathered {
+            UnlockRequirement::TotalDeposited {
                 resource: ResourceType::Food,
                 amount: 2,
             },
-            UnlockRequirement::TotalGathered {
+            UnlockRequirement::TotalDeposited {
                 resource: ResourceType::Water,
                 amount: 2,
             },
@@ -77,7 +88,10 @@ fn check_unlocks(
         // Check that all requirements are met
         if requirements.0.iter().all(|req| match req {
             UnlockRequirement::TotalGathered { resource, amount } => {
-                stats.total_gathered.get(resource).unwrap_or(&0) >= amount
+                stats.nodes_gathered.get(resource).unwrap_or(&0) >= amount
+            }
+            UnlockRequirement::TotalDeposited { resource, amount } => {
+                stats.resources_deposited.get(resource).unwrap_or(&0) >= amount
             }
         }) {
             // Add the Unlocked tag
@@ -93,10 +107,18 @@ fn check_unlocks(
 /// Tracks lifetime statistics for the player
 #[derive(Resource, Default)]
 struct GatheringStatistics {
-    total_gathered: HashMap<ResourceType, usize>,
+    nodes_gathered: HashMap<ResourceNodeType, usize>,
+    resources_deposited: HashMap<ResourceType, usize>,
 }
+
 /// Update lifetime statistics
-fn update_statistics(event: On<HarvestEvent>, mut stats: ResMut<GatheringStatistics>) {
+fn update_harvest_statistics(event: On<HarvestEvent>, mut stats: ResMut<GatheringStatistics>) {
     info!("Updating stats: {:?}", event);
-    *stats.total_gathered.entry(event.resource_type).or_default() += event.amount;
+    *stats.nodes_gathered.entry(event.resource_node).or_default() += event.amount;
+}
+
+/// Update lifetime statistics
+fn update_deposit_statistics(event: On<DepositEvent>, mut stats: ResMut<GatheringStatistics>) {
+    info!("Updating stats: {:?}", event);
+    *stats.resources_deposited.entry(event.resource).or_default() += event.amount;
 }
