@@ -3,7 +3,10 @@ use std::f32;
 use bevy::prelude::*;
 
 use crate::{
-    consts::{GROUND_ITEM_BOB_HEIGHT, GROUND_ITEM_BOB_SPEED, Z_GROUND_ITEM},
+    consts::{
+        GROUND_ITEM_BOB_HEIGHT, GROUND_ITEM_BOB_SPEED, TILE_DISPLAY_SIZE, Z_GROUND_ITEM,
+        Z_HELD_ITEM,
+    },
     map::WorldPos,
     player::{HeldItem, Player, Targettable, Targetted},
     utils::run_if::key_just_pressed,
@@ -16,7 +19,9 @@ impl Plugin for GroundItemPlugin {
             Update,
             (
                 animate_items,
-                drop_item.run_if(key_just_pressed(KeyCode::KeyE)),
+                (drop_item, pickup_item)
+                    .chain()
+                    .run_if(key_just_pressed(KeyCode::KeyE)),
             ),
         );
     }
@@ -89,10 +94,30 @@ fn drop_item(
 
 /// Pick up a nearby item from the ground
 fn pickup_item(
-    ground_item: Single<(), (With<GroundItem>, With<Targetted>)>,
+    ground_item: Single<Entity, (With<GroundItem>, With<Targetted>)>,
     held_item: Query<(), With<HeldItem>>,
+    player: Single<(Entity, &Transform), With<Player>>,
+    mut commands: Commands,
 ) {
     if !held_item.is_empty() {
         // Already holding an item
     }
+
+    // Move entity from world to player
+    let mut item = commands.entity(*ground_item);
+    item.insert(ChildOf(player.0));
+
+    // Remove ground related components
+    // TODO: Move this to a bundle
+    item.remove::<(GroundItem, Targettable, AnimationCycleTime)>();
+
+    // Add holding related components
+    item.insert((
+        HeldItem,
+        Transform::from_translation(
+            // Need to un-scale so offset is ok
+            (Vec2::splat(0.5) * TILE_DISPLAY_SIZE.as_vec2() / player.1.scale.truncate())
+                .extend(Z_HELD_ITEM),
+        ),
+    ));
 }
