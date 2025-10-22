@@ -6,16 +6,13 @@ use bevy::{
 
 use crate::{
     consts::{
-        PLAYER_REACH, PLAYER_SPEED, RESOURCE_PICKUP_AMOUNT, TILE_DISPLAY_SIZE, TILE_RAW_SIZE,
-        Z_HELD_ITEM, Z_PLAYER,
+        HIGHLIGHT_SCALE, PLAYER_REACH, PLAYER_SPEED, RESOURCE_PICKUP_AMOUNT, TILE_DISPLAY_SIZE,
+        TILE_RAW_SIZE, Z_HELD_ITEM, Z_PLAYER,
     },
     items::ItemType,
     map::{ChunkLUT, TerrainData, TilePos, WorldPos},
     resources::{ResourceAmount, ResourceMarker, ResourceNodeType},
-    sprites::{
-        EntitySprite, GetSprite, ItemSprite, SpriteSheets,
-        TerrainSprite,
-    },
+    sprites::{EntitySprite, GetSprite, ItemSprite, SpriteSheets, TerrainSprite},
     utils::run_if::{empty_hands, key_just_pressed},
 };
 
@@ -101,7 +98,7 @@ fn target_thing(
     mut commands: Commands,
     player: Single<&WorldPos, With<Player>>,
     targettables: Query<(Entity, Option<&TilePos>, Option<&WorldPos>), With<Targettable>>,
-    targetted: Query<Entity, (With<Targettable>, With<Targetted>)>,
+    targetted: Query<Entity, With<Targetted>>,
 ) {
     let closest = targettables
         .iter()
@@ -121,8 +118,14 @@ fn target_thing(
         .filter(|(_, _, distance2)| *distance2 <= PLAYER_REACH.powi(2))
         .min_by(|(_, _, d1), (_, _, d2)| d1.total_cmp(d2));
 
-    // TODO: Don't keep removing + adding if it's the same target
     for entity in targetted {
+        if let Some((closest_entity, _, _)) = closest
+            && entity == closest_entity
+        {
+            // Same entity targetted, don't remove it
+            continue;
+        }
+
         commands
             .entity(entity)
             // Entity may be removed by the time this is ran, in which case it doesn't matter
@@ -139,19 +142,21 @@ fn target_thing(
 /// Make targetted things bigger
 fn highlight_target(
     event: On<Add, Targetted>,
-    mut transforms: Query<&mut Transform, With<Targetted>>,
+    mut transforms: Query<(Entity, &mut Transform), With<Targetted>>,
 ) {
-    if let Ok(mut transform) = transforms.get_mut(event.entity) {
-        transform.scale = (1.2 * TILE_DISPLAY_SIZE.as_vec2() / TILE_RAW_SIZE.as_vec2()).extend(1.);
+    if let Ok((entity, mut transform)) = transforms.get_mut(event.entity) {
+        info!("Highlighting target {:?}", entity);
+        transform.scale *= Vec2::splat(HIGHLIGHT_SCALE).extend(1.);
     }
 }
 /// Make untargetted things smaller
 fn unhighlight_target(
     event: On<Remove, Targetted>,
-    mut transforms: Query<&mut Transform, Added<Targetted>>,
+    mut transforms: Query<(Entity, &mut Transform), Added<Targetted>>,
 ) {
-    if let Ok(mut transform) = transforms.get_mut(event.entity) {
-        transform.scale = (1. * TILE_DISPLAY_SIZE.as_vec2() / TILE_RAW_SIZE.as_vec2()).extend(1.);
+    if let Ok((entity, mut transform)) = transforms.get_mut(event.entity) {
+        info!("Un-highlighting target {:?}", entity);
+        transform.scale /= Vec2::splat(HIGHLIGHT_SCALE).extend(1.);
     }
 }
 
@@ -272,6 +277,12 @@ fn show_water_icon(
 ) {
     let (player, near_water, transform, held_item) = *player;
 
+    debug!(
+        "targets {:?} water {:?} holding {:?}",
+        targets.iter().len(),
+        near_water,
+        held_item
+    );
     let show_icon = targets.is_empty() && near_water && !held_item;
 
     match (show_icon, water_icon) {
