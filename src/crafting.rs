@@ -5,7 +5,7 @@ use crate::{
     items::ItemType,
     knowledge::Unlocked,
     map::{TilePos, WorldPos},
-    player::{HeldItem, Player, held_item_bundle},
+    player::{Holding, Player, held_item_bundle},
     resources::ResourceType,
     sprites::{GetSprite, SpriteSheets},
     village::{ResourceStockpile, StockpileLut, VillageCentre},
@@ -156,17 +156,17 @@ fn try_craft_recipes(
     mut reader: MessageReader<CraftRecipe>,
     stockpile_lut: Res<StockpileLut>,
     mut resources: Query<&mut ResourceStockpile>,
-    player: Single<(Entity, &Transform), With<Player>>,
-    held_item: Option<Single<(), With<HeldItem>>>,
+    player: Single<(EntityRef, Has<Holding>), (With<Player>, Without<ResourceStockpile>)>,
     sprite_sheets: Res<SpriteSheets>,
     mut commands: Commands,
 ) {
-    let (player, player_transform) = *player;
+    let (player, held_item) = *player;
 
     // TODO: Might need to just process 1 per frame here
     for CraftRecipe(recipe) in reader.read() {
         info!("Attempting to craft: {:?}", recipe.product);
-        if held_item.is_some() {
+
+        if held_item {
             commands.trigger(FailedCraft {
                 recipe: recipe.clone(),
                 reason: FailedCraftReason::HoldingItem,
@@ -198,9 +198,9 @@ fn try_craft_recipes(
             }
 
             // Give item to player
-            commands.entity(player).with_child((
+            commands.spawn((
+                held_item_bundle(player),
                 recipe.product,
-                held_item_bundle(player_transform),
                 recipe.product.get_sprite(&sprite_sheets),
             ));
         } else {

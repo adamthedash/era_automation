@@ -8,7 +8,7 @@ use crate::{
         Z_HELD_ITEM,
     },
     map::WorldPos,
-    player::{HeldItem, Player, Targettable, Targetted},
+    player::{HeldBy, Holding, Player, Targettable, Targetted},
     utils::run_if::{empty_hands, key_just_pressed},
 };
 
@@ -64,19 +64,21 @@ fn animate_items(
 }
 
 /// Drop an item on the ground
-fn drop_item(
-    player_pos: Single<&WorldPos, With<Player>>,
-    held_item: Single<Entity, With<HeldItem>>,
-    mut commands: Commands,
-) {
+fn drop_item(player: Single<(&WorldPos, &Holding), With<Player>>, mut commands: Commands) {
     info!("Dropping item");
+
+    let held_item = player
+        .1
+        .iter()
+        .next()
+        .expect("This system only runs if there is an item being held");
+
     // Move entity from player children to world
-    let mut item = commands.entity(*held_item);
+    let mut item = commands.entity(held_item);
     item.remove::<ChildOf>();
 
     // Remove holding related components
-    // TODO: Move this to a bundle
-    item.remove::<HeldItem>();
+    item.remove::<HeldBy>();
 
     // Add ground related components
     item.insert((
@@ -84,11 +86,11 @@ fn drop_item(
         GroundItem,
         Targettable,
         // Drop at player's feet
-        **player_pos,
+        *player.0,
         // Animation
         AnimationCycleTime(GROUND_ITEM_BOB_SPEED),
         // Render
-        player_pos.as_transform(Z_GROUND_ITEM),
+        player.0.as_transform(Z_GROUND_ITEM),
     ));
 }
 
@@ -104,12 +106,11 @@ fn pickup_item(
     item.insert(ChildOf(player.0));
 
     // Remove ground related components
-    // TODO: Move this to a bundle
     item.remove::<(GroundItem, Targettable, AnimationCycleTime, WorldPos)>();
 
     // Add holding related components
     item.insert((
-        HeldItem,
+        HeldBy(player.0),
         Transform::from_translation(
             // Need to un-scale so offset is ok
             (Vec2::splat(0.5) * TILE_DISPLAY_SIZE.as_vec2() / player.1.scale.truncate())

@@ -5,7 +5,7 @@ use crate::{
     consts::Z_RESOURCES,
     items::ItemType,
     map::TilePos,
-    player::{HeldItem, Targettable, Targetted},
+    player::{HeldBy, Targettable, Targetted},
     resources::{ResourceAmount, ResourceType},
     sprites::{ResourceSprite, SpriteSheets},
     utils::run_if::key_just_pressed,
@@ -153,7 +153,7 @@ pub struct DepositEvent {
 /// Deposit a held item into the village
 fn deposit_resource(
     mut commands: Commands,
-    items: Query<(Entity, &ItemType, &ResourceAmount), With<HeldItem>>,
+    items: Query<(Entity, &ItemType, &ResourceAmount), With<HeldBy>>,
     mut stockpiles: Query<(&mut ResourceStockpile, &ResourceType)>,
 ) {
     for (entity, item_type, amount) in items {
