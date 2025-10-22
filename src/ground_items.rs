@@ -3,9 +3,7 @@ use std::f32;
 use bevy::prelude::*;
 
 use crate::{
-    consts::{
-        GROUND_ITEM_BOB_HEIGHT, GROUND_ITEM_BOB_SPEED, Z_GROUND_ITEM,
-    },
+    consts::{GROUND_ITEM_BOB_HEIGHT, GROUND_ITEM_BOB_SPEED, Z_GROUND_ITEM},
     map::WorldPos,
     player::{HeldBy, Holding, Player, Targettable, Targetted, held_item_bundle},
     utils::run_if::{empty_hands, key_just_pressed},
@@ -105,7 +103,15 @@ fn pickup_item(
     commands
         .entity(*ground_item)
         // Remove ground related components
-        .remove::<(GroundItem, Targettable, AnimationCycleTime, WorldPos)>()
+        .remove::<(
+            GroundItem,
+            Targettable,
+            // TODO: See if this can be removed just by removing Targettable, rather than having it
+            // be automatically cleaned up on next frame by targetting system
+            Targetted,
+            AnimationCycleTime,
+            WorldPos,
+        )>()
         // Add holding related components
         .insert(held_item_bundle(player.0));
 }

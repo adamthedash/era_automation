@@ -153,7 +153,7 @@ fn highlight_target(
 /// Make untargetted things smaller
 fn unhighlight_target(
     event: On<Remove, Targetted>,
-    mut transforms: Query<(Entity, &mut Transform), Added<Targetted>>,
+    mut transforms: Query<(Entity, &mut Transform)>,
 ) {
     if let Ok((entity, mut transform)) = transforms.get_mut(event.entity) {
         info!("Un-highlighting target {:?}", entity);

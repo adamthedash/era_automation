@@ -1,6 +1,7 @@
 use bevy::{platform::collections::HashSet, prelude::*};
 
 use crate::{
+    consts::Z_CONTAINED_ITEM,
     ground_items::{AnimationCycleTime, GroundItem},
     items::ItemType,
     map::WorldPos,
@@ -50,7 +51,7 @@ pub fn contain_item(
     item.insert((
         ContainedBy(*container),
         // Render contained item above/behind container
-        Transform::from_xyz(0., 0.5, -1.),
+        Transform::from_xyz(0., 0.5, Z_CONTAINED_ITEM),
     ));
 }
 
