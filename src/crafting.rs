@@ -198,11 +198,13 @@ fn try_craft_recipes(
             }
 
             // Give item to player
-            commands.spawn((
+            let entity_commands = commands.spawn((
                 held_item_bundle(player),
                 recipe.product,
                 recipe.product.get_sprite(&sprite_sheets),
             ));
+
+            recipe.product.add_extra_components(entity_commands);
         } else {
             // Not enough resources
             commands.trigger(FailedCraft {

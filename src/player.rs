@@ -6,8 +6,7 @@ use bevy::{
 
 use crate::{
     consts::{
-        HIGHLIGHT_SCALE, PLAYER_REACH, PLAYER_SPEED, RESOURCE_PICKUP_AMOUNT, TILE_DISPLAY_SIZE,
-        TILE_RAW_SIZE, Z_HELD_ITEM, Z_PLAYER,
+        HIGHLIGHT_SCALE, PLAYER_REACH, PLAYER_SPEED, RESOURCE_PICKUP_AMOUNT, TILE_DISPLAY_SIZE, Z_HELD_ITEM, Z_PLAYER,
     },
     items::ItemType,
     map::{ChunkLUT, TerrainData, TilePos, WorldPos},

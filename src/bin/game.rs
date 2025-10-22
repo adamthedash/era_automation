@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use era_automation::{
     consts::CHUNK_LOAD_RADIUS,
+    container::ContainerPlugin,
     crafting::CraftingPlugin,
     ground_items::GroundItemPlugin,
     knowledge::KnowledgePlugin,
@@ -24,6 +25,7 @@ fn main() {
         .add_plugins(NotificationPlugin)
         .add_plugins(CraftingPlugin)
         .add_plugins(GroundItemPlugin)
+        .add_plugins(ContainerPlugin)
         .add_systems(Update, spawn_chunks)
         .run();
 }

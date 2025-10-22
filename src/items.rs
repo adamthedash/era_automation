@@ -1,6 +1,7 @@
-use bevy::prelude::*;
+use bevy::{platform::collections::HashSet, prelude::*};
 
 use crate::{
+    container::{ContainableItems, Container},
     resources::ResourceType,
     sprites::{GetSprite, ItemSprite, SpriteSheets},
 };
@@ -33,7 +34,23 @@ impl ItemType {
             ItemType::Bowl => None,
         }
     }
+
+    /// Adds extra item-specific components to an entity
+    pub fn add_extra_components(&self, mut commands: EntityCommands) {
+        use ItemType::*;
+        if self == &Bowl {
+            commands.insert((
+                Container,
+                ContainableItems({
+                    let mut set = HashSet::new();
+                    set.insert(Water);
+                    set
+                }),
+            ));
+        }
+    }
 }
+
 impl GetSprite for ItemType {
     fn get_sprite(self, sprite_sheets: &SpriteSheets) -> Sprite {
         self.sprite_type().get_sprite(sprite_sheets)
