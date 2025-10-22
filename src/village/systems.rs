@@ -2,6 +2,7 @@ use bevy::{platform::collections::HashMap, prelude::*};
 
 use crate::{
     consts::Z_RESOURCES,
+    container::Contains,
     items::ItemType,
     map::TilePos,
     player::{HeldBy, Targettable},
@@ -105,10 +106,24 @@ pub fn spawn_village_centre(mut commands: Commands, sprite_sheets: Res<SpriteShe
 /// Deposit a held item into the village
 pub fn deposit_resource(
     mut commands: Commands,
-    items: Query<(Entity, &ItemType, &ResourceAmount), With<HeldBy>>,
+    held_items: Query<(Entity, Option<&Contains>), With<HeldBy>>,
+    items: Query<(&ItemType, &ResourceAmount)>,
     mut stockpiles: Query<(&mut ResourceStockpile, &ResourceType)>,
 ) {
-    for (entity, item_type, amount) in items {
+    // Collate items held directly & in containers
+    let entities = held_items.iter().flat_map(|(entity, contains)| {
+        if let Some(contains) = contains {
+            contains.iter().collect()
+        } else {
+            vec![entity]
+        }
+    });
+
+    for entity in entities {
+        let Ok((item_type, amount)) = items.get(entity) else {
+            continue;
+        };
+
         let Some(resource) = item_type.resource_type() else {
             // No resource provided by this item
             continue;
