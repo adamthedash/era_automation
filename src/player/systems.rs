@@ -119,6 +119,7 @@ pub fn highlight_target(
         transform.scale *= Vec2::splat(HIGHLIGHT_SCALE).extend(1.);
     }
 }
+
 /// Make untargetted things smaller
 pub fn unhighlight_target(
     event: On<Remove, Targetted>,
@@ -128,6 +129,12 @@ pub fn unhighlight_target(
         info!("Un-highlighting target {:?}", entity);
         transform.scale /= Vec2::splat(HIGHLIGHT_SCALE).extend(1.);
     }
+}
+
+/// Triggered when something is made untargettable
+pub fn make_untargettable(event: On<Remove, Targettable>, mut commands: Commands) {
+    // Might be triggered by entity despawning, so try remove
+    commands.entity(event.entity).try_remove::<Targetted>();
 }
 
 /// Pick up a resource and put it in the player's hand
@@ -152,10 +159,7 @@ pub fn harvest_resource(
     // Add item to player
     let entity = commands
         .spawn((
-            {
-                let player = *player;
-                HeldItemBundle::new(player)
-            },
+            HeldItemBundle::new(*player),
             // Game data
             *item_type,
             ResourceAmount(pickup_amount),
@@ -272,10 +276,7 @@ pub fn harvest_water(
     // Add item to player
     let entity = commands
         .spawn((
-            {
-                let player = *player;
-                HeldItemBundle::new(player)
-            },
+            HeldItemBundle::new(*player),
             // Game data
             ItemType::Water,
             ResourceAmount(RESOURCE_PICKUP_AMOUNT),

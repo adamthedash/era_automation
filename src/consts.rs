@@ -27,9 +27,9 @@ pub const Z_RESOURCES: f32 = 1.;
 pub const Z_GROUND_ITEM: f32 = 2.;
 pub const Z_PLAYER: f32 = 3.;
 /// Z relative to Z_PLAYER
-pub const Z_HELD_ITEM: f32 = 1.;
+pub const Z_HELD_ITEM: f32 = 1e-1;
 /// Z relative to Z_HELD_ITEM
-pub const Z_CONTAINED_ITEM: f32 = -1.;
+pub const Z_CONTAINED_ITEM: f32 = -1e-2;
 
 /// Tiles around the starting point which can't be water terrain
 pub const TERRAIN_STARTING_RADIUS: i32 = 25;

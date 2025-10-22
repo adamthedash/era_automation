@@ -28,6 +28,7 @@ impl Plugin for PlayerPlugin {
                 ),
             )
             .add_observer(highlight_target)
-            .add_observer(unhighlight_target);
+            .add_observer(unhighlight_target)
+            .add_observer(make_untargettable);
     }
 }

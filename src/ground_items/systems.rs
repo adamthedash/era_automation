@@ -4,9 +4,9 @@ use std::f32;
 use bevy::prelude::*;
 
 use crate::{
-    consts::{GROUND_ITEM_BOB_HEIGHT, GROUND_ITEM_BOB_SPEED, Z_GROUND_ITEM},
+    consts::GROUND_ITEM_BOB_HEIGHT,
     map::WorldPos,
-    player::{HeldBy, HeldItemBundle, Holding, Player, Targettable, Targetted},
+    player::{HeldItemBundle, Holding, Player, Targetted},
 };
 
 /// Bob the items up & down
@@ -48,25 +48,12 @@ pub fn drop_item(player: Single<(&WorldPos, &Holding), With<Player>>, mut comman
         .next()
         .expect("This system only runs if there is an item being held");
 
-    // Move entity from player children to world
-    let mut item = commands.entity(held_item);
-    item.remove::<ChildOf>();
-
-    // Remove holding related components
-    item.remove::<HeldBy>();
-
-    // Add ground related components
-    item.insert((
-        // Markers
-        GroundItem,
-        Targettable,
-        // Drop at player's feet
-        *player.0,
-        // Animation
-        AnimationCycleTime(GROUND_ITEM_BOB_SPEED),
-        // Render
-        player.0.as_transform(Z_GROUND_ITEM),
-    ));
+    commands
+        .entity(held_item)
+        // Remove holding related components
+        .remove::<HeldItemBundle>()
+        // Add ground related components
+        .insert(GroundItemBundle::new(player.0));
 }
 
 /// Pick up a nearby item from the ground
@@ -79,18 +66,7 @@ pub fn pickup_item(
     commands
         .entity(*ground_item)
         // Remove ground related components
-        .remove::<(
-            GroundItem,
-            Targettable,
-            // TODO: See if this can be removed just by removing Targettable, rather than having it
-            // be automatically cleaned up on next frame by targetting system
-            Targetted,
-            AnimationCycleTime,
-            WorldPos,
-        )>()
+        .remove::<GroundItemBundle>()
         // Add holding related components
-        .insert({
-            let player = player.0;
-            HeldItemBundle::new(player)
-        });
+        .insert(HeldItemBundle::new(player.0));
 }
