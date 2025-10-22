@@ -1,50 +1,15 @@
-use bevy::prelude::*;
-use std::collections::HashMap;
+use bevy::{platform::collections::HashMap, prelude::*};
 
 use crate::{
     consts::Z_RESOURCES,
     items::ItemType,
     map::TilePos,
-    player::{HeldBy, Targettable, Targetted},
+    player::{HeldBy, Targettable},
     resources::{ResourceAmount, ResourceType},
     sprites::{GetSprite, ResourceSprite, SpriteSheets},
-    utils::run_if::key_just_pressed,
 };
 
-pub struct VillagePlugin;
-impl Plugin for VillagePlugin {
-    fn build(&self, app: &mut bevy::app::App) {
-        app.init_resource::<StockpileLut>()
-            .add_systems(Startup, (setup_village, setup_resource_display).chain())
-            .add_systems(Startup, spawn_village_centre)
-            .add_systems(
-                Update,
-                (
-                    update_resources,
-                    update_resource_display,
-                    deposit_resource.run_if(key_just_pressed(KeyCode::Space).and(
-                        // Only run when targetting a village centre
-                        |village: Query<(), (With<VillageCentre>, With<Targetted>)>| {
-                            !village.is_empty()
-                        },
-                    )),
-                ),
-            );
-    }
-}
-
-#[derive(Component)]
-pub struct ResourceStockpile(pub f32);
-
-/// Resource drain rate per second
-#[derive(Component)]
-pub struct ResourceDrainRate(f32);
-
-#[derive(Component)]
-pub struct ResourceName(String);
-
-#[derive(Resource, Default)]
-pub struct StockpileLut(pub HashMap<ResourceType, Entity>);
+use super::components::*;
 
 /// Initialise the starting resource stockpiles
 pub fn setup_village(mut commands: Commands, mut lut: ResMut<StockpileLut>) {
@@ -122,11 +87,8 @@ pub fn update_resource_display(
     }
 }
 
-/// Marker for village building
-#[derive(Component)]
-pub struct VillageCentre;
 /// Spawn the village centre that's used to deposit items
-fn spawn_village_centre(mut commands: Commands, sprite_sheets: Res<SpriteSheets>) {
+pub fn spawn_village_centre(mut commands: Commands, sprite_sheets: Res<SpriteSheets>) {
     let pos = TilePos(IVec2::ZERO);
     let village = commands
         .spawn((
@@ -140,14 +102,8 @@ fn spawn_village_centre(mut commands: Commands, sprite_sheets: Res<SpriteSheets>
     ResourceSprite::House.spawn_sprite(&mut commands, &sprite_sheets, Some(village));
 }
 
-#[derive(Debug, Event)]
-pub struct DepositEvent {
-    pub resource: ResourceType,
-    pub amount: usize,
-}
-
 /// Deposit a held item into the village
-fn deposit_resource(
+pub fn deposit_resource(
     mut commands: Commands,
     items: Query<(Entity, &ItemType, &ResourceAmount), With<HeldBy>>,
     mut stockpiles: Query<(&mut ResourceStockpile, &ResourceType)>,

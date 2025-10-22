@@ -4,6 +4,7 @@ use bevy::{
     prelude::*,
 };
 
+use super::components::*;
 use crate::{
     consts::{
         CAMERA_ZOOM, HIGHLIGHT_SCALE, PLAYER_REACH, PLAYER_SPEED, RESOURCE_PICKUP_AMOUNT,
@@ -13,36 +14,8 @@ use crate::{
     map::{ChunkLUT, TerrainData, TilePos, WorldPos},
     resources::{ResourceAmount, ResourceMarker, ResourceNodeType},
     sprites::{EntitySprite, GetSprite, ItemSprite, SpriteSheets, TerrainSprite},
-    utils::run_if::{empty_hands, key_just_pressed},
 };
 
-pub struct PlayerPlugin;
-impl Plugin for PlayerPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup_player)
-            .add_systems(
-                Update,
-                (
-                    move_player,
-                    target_thing,
-                    harvest_resource.run_if(key_just_pressed(KeyCode::Space).and(empty_hands)),
-                    check_near_water,
-                    show_water_icon,
-                    harvest_water.run_if(
-                        key_just_pressed(KeyCode::Space)
-                            .and(empty_hands)
-                            // Targets take precedence
-                            .and(|targets: Query<(), With<Targetted>>| targets.is_empty()),
-                    ),
-                ),
-            )
-            .add_observer(highlight_target)
-            .add_observer(unhighlight_target);
-    }
-}
-
-#[derive(Component)]
-pub struct Player;
 pub fn setup_player(mut commands: Commands, sprite_sheets: Res<SpriteSheets>) {
     let world_pos = WorldPos(Vec2::ZERO);
     commands.spawn((
@@ -90,12 +63,8 @@ pub fn move_player(
     camera.0 = player.0;
 }
 
-#[derive(Component)]
-pub struct Targettable;
-#[derive(Component)]
-pub struct Targetted;
 /// Targets the closest thing to the player
-fn target_thing(
+pub fn target_thing(
     mut commands: Commands,
     player: Single<&WorldPos, With<Player>>,
     targettables: Query<(Entity, Option<&TilePos>, Option<&WorldPos>), With<Targettable>>,
@@ -141,7 +110,7 @@ fn target_thing(
 }
 
 /// Make targetted things bigger
-fn highlight_target(
+pub fn highlight_target(
     event: On<Add, Targetted>,
     mut transforms: Query<(Entity, &mut Transform), With<Targetted>>,
 ) {
@@ -151,7 +120,7 @@ fn highlight_target(
     }
 }
 /// Make untargetted things smaller
-fn unhighlight_target(
+pub fn unhighlight_target(
     event: On<Remove, Targetted>,
     mut transforms: Query<(Entity, &mut Transform)>,
 ) {
@@ -161,23 +130,8 @@ fn unhighlight_target(
     }
 }
 
-#[derive(Component)]
-#[relationship(relationship_target = Holding)]
-pub struct HeldBy(pub Entity);
-
-#[derive(Component, Debug)]
-#[relationship_target(relationship = HeldBy)]
-pub struct Holding(Vec<Entity>);
-
-#[derive(Event, Debug)]
-pub struct HarvestEvent {
-    pub resource_node: ResourceNodeType,
-    pub amount: usize,
-    // TODO: Node type / position?
-}
-
 /// Pick up a resource and put it in the player's hand
-fn harvest_resource(
+pub fn harvest_resource(
     mut commands: Commands,
     player: Single<Entity, With<Player>>,
     mut targetted_resources: Populated<
@@ -198,7 +152,10 @@ fn harvest_resource(
     // Add item to player
     let entity = commands
         .spawn((
-            held_item_bundle(*player),
+            {
+                let player = *player;
+                HeldItemBundle::new(player)
+            },
             // Game data
             *item_type,
             ResourceAmount(pickup_amount),
@@ -222,10 +179,8 @@ fn harvest_resource(
     });
 }
 
-#[derive(Component)]
-struct NearWater;
 /// Checks whether the player is in range of a water source
-fn check_near_water(
+pub fn check_near_water(
     player: Single<(Entity, &WorldPos), With<Player>>,
     chunks_lut: Res<ChunkLUT>,
     tile_data: Query<&TerrainData>,
@@ -268,10 +223,8 @@ fn check_near_water(
     }
 }
 
-#[derive(Component)]
-struct WaterIcon;
 /// Shows the water icon when the player is near the water
-fn show_water_icon(
+pub fn show_water_icon(
     player: Single<(Entity, Has<NearWater>, Has<Holding>), With<Player>>,
     targets: Query<(), With<Targetted>>,
     water_icon: Option<Single<Entity, With<WaterIcon>>>,
@@ -310,18 +263,8 @@ fn show_water_icon(
     }
 }
 
-/// Bundle of components for spawning a held item for the the player
-pub fn held_item_bundle(player: Entity) -> impl Bundle {
-    (
-        ChildOf(player),
-        HeldBy(player),
-        // Render off to the side of the player
-        Transform::from_xyz(0.5, 0.5, Z_HELD_ITEM),
-    )
-}
-
 /// Pick up some water from an infinite source
-fn harvest_water(
+pub fn harvest_water(
     mut commands: Commands,
     player: Single<Entity, (With<Player>, With<NearWater>)>,
     sprite_sheets: Res<SpriteSheets>,
@@ -329,7 +272,10 @@ fn harvest_water(
     // Add item to player
     let entity = commands
         .spawn((
-            held_item_bundle(*player),
+            {
+                let player = *player;
+                HeldItemBundle::new(player)
+            },
             // Game data
             ItemType::Water,
             ResourceAmount(RESOURCE_PICKUP_AMOUNT),

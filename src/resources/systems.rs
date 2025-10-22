@@ -1,4 +1,5 @@
-use bevy::{platform::collections::HashMap, prelude::*};
+use super::components::*;
+use bevy::prelude::*;
 use rand::random_bool;
 
 use crate::{
@@ -9,62 +10,12 @@ use crate::{
     items::ItemType,
     map::{ChunkCreated, ChunkPos, TerrainData, TilePos},
     player::Targettable,
-    sprites::{GetSprite, ResourceSprite, SpriteSheets, TerrainSprite},
+    sprites::{GetSprite, SpriteSheets, TerrainSprite},
     utils,
 };
 
-pub struct ResourcePlugin;
-impl Plugin for ResourcePlugin {
-    fn build(&self, app: &mut App) {
-        app.init_resource::<ResourceNodes>()
-            .add_observer(spawn_resources);
-    }
-}
-
-/// The type of resource used by the village
-#[derive(Component, Clone, Copy, Hash, PartialEq, Eq, Debug)]
-pub enum ResourceType {
-    Wood,
-    Food,
-    Water,
-}
-
-/// The type of node resource node placed in the world
-#[derive(Component, Clone, Copy, Hash, PartialEq, Eq, Debug)]
-pub enum ResourceNodeType {
-    Tree,
-    Bush,
-    Water,
-}
-
-impl ResourceNodeType {
-    pub fn sprite(&self) -> ResourceSprite {
-        match self {
-            ResourceNodeType::Tree => ResourceSprite::Tree,
-            ResourceNodeType::Bush => ResourceSprite::Bush,
-            ResourceNodeType::Water => unreachable!("Water node should never be rendered"),
-        }
-    }
-}
-
-impl GetSprite for ResourceNodeType {
-    fn get_sprite(&self, sprite_sheets: &SpriteSheets) -> Sprite {
-        self.sprite().get_sprite(sprite_sheets)
-    }
-}
-
-/// The amount of resource left in a node
-#[derive(Component)]
-pub struct ResourceAmount(pub usize);
-
-/// Sparse lookup for all resource nod entities spawned in the world
-#[derive(Resource, Default)]
-struct ResourceNodes(HashMap<TilePos, Entity>);
-
-#[derive(Component)]
-pub struct ResourceMarker;
 /// Populate a chunk with naturally spawning resources
-fn spawn_resources(
+pub fn spawn_resources(
     event: On<ChunkCreated>,
     mut commands: Commands,
     mut resources: ResMut<ResourceNodes>,

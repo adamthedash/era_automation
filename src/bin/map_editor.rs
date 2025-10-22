@@ -3,10 +3,13 @@ use bevy_egui::{EguiContexts, EguiPlugin, EguiPrimaryContextPass, egui};
 use era_automation::{
     consts::CHUNK_LOAD_RADIUS,
     map::{
-        ChunkLUT, ChunkPos, CreateChunk, WorldGenerator, WorldPos, create_chunks, init_world_gen,
-        update_transforms,
+        ChunkLUT, ChunkPos, CreateChunk, WorldGenerator, WorldPos,
+        systems::{create_chunks, init_world_gen, update_transforms},
     },
-    player::{Player, move_player, setup_player},
+    player::{
+        Player,
+        systems::{move_player, setup_player},
+    },
     sprites::SpritePlugin,
     utils::noise::perlin_stack,
 };

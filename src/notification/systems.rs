@@ -4,20 +4,10 @@ use bevy::prelude::*;
 
 use crate::{crafting::FailedCraft, knowledge::UnlockEvent};
 
-pub struct NotificationPlugin;
-impl Plugin for NotificationPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Startup, init_notification_system)
-            .add_systems(Update, update_notifications)
-            .add_observer(failed_craft)
-            .add_observer(unlock_notification);
-    }
-}
+use super::components::*;
 
-/// Spawn the noficiation box
-#[derive(Component)]
-struct NotificationBox;
-fn init_notification_system(mut commands: Commands) {
+/// Spawn the notification box
+pub fn init_notification_system(mut commands: Commands) {
     commands.spawn((
         Node {
             display: Display::Flex,
@@ -31,11 +21,8 @@ fn init_notification_system(mut commands: Commands) {
     ));
 }
 
-/// How long left for a notification to display
-#[derive(Component)]
-struct DisplayDuration(Duration);
 /// Remove notifications when their timer has expired
-fn update_notifications(
+pub fn update_notifications(
     notifications: Query<(Entity, &mut DisplayDuration)>,
     timer: Res<Time>,
     mut commands: Commands,
@@ -52,7 +39,7 @@ fn update_notifications(
 }
 
 /// Spawns a notification for a knowledge unlock
-fn unlock_notification(
+pub fn unlock_notification(
     event: On<UnlockEvent>,
     display_box: Single<Entity, With<NotificationBox>>,
     mut commands: Commands,
@@ -68,7 +55,7 @@ fn unlock_notification(
 }
 
 /// Spawns a notification when a craft is failed
-fn failed_craft(
+pub fn failed_craft(
     event: On<FailedCraft>,
     display_box: Single<Entity, With<NotificationBox>>,
     mut commands: Commands,

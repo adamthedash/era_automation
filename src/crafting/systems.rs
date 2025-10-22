@@ -1,36 +1,18 @@
 use bevy::prelude::*;
 
+use super::components::*;
+
 use crate::{
     consts::PLAYER_REACH,
-    items::ItemType,
     knowledge::Unlocked,
     map::{TilePos, WorldPos},
-    player::{Holding, Player, held_item_bundle},
-    resources::ResourceType,
+    player::{HeldItemBundle, Holding, Player},
     sprites::{GetSprite, SpriteSheets},
     village::{ResourceStockpile, StockpileLut, VillageCentre},
 };
 
-pub struct CraftingPlugin;
-impl Plugin for CraftingPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_message::<CraftRecipe>().add_systems(
-            Update,
-            (
-                check_near_crafting_station,
-                show_crafting_ui,
-                crafting_button,
-                try_craft_recipes,
-            ),
-        );
-    }
-}
-
-#[derive(Component)]
-struct NearCraftingStation;
-
 /// Checks if the player is within range of a crafting station
-fn check_near_crafting_station(
+pub fn check_near_crafting_station(
     player: Single<(Entity, &WorldPos), With<Player>>,
     village: Query<&TilePos, With<VillageCentre>>,
     mut commands: Commands,
@@ -48,21 +30,8 @@ fn check_near_crafting_station(
     }
 }
 
-/// Resource requirements to craft an item
-#[derive(Component, Clone, Debug)]
-pub struct Recipe {
-    pub reqs: Vec<(ResourceType, usize)>,
-    pub product: ItemType,
-}
-
-#[derive(Component)]
-struct CraftingWindow;
-
-#[derive(Component)]
-struct CraftingNode;
-
 /// Shows the recipes that can be crafted
-fn show_crafting_ui(
+pub fn show_crafting_ui(
     near_station: Single<Option<&NearCraftingStation>, With<Player>>,
     crafting_window: Option<Single<Entity, With<CraftingWindow>>>,
     recipes: Query<&Recipe, With<Unlocked>>,
@@ -120,11 +89,8 @@ fn show_crafting_ui(
     }
 }
 
-#[derive(Message)]
-pub struct CraftRecipe(pub Recipe);
-
 /// Interaction with crafting buttons
-fn crafting_button(
+pub fn crafting_button(
     buttons: Query<(&Interaction, &mut BackgroundColor, &Recipe), Changed<Interaction>>,
     mut writer: MessageWriter<CraftRecipe>,
 ) {
@@ -139,20 +105,8 @@ fn crafting_button(
     }
 }
 
-#[derive(Debug)]
-pub enum FailedCraftReason {
-    NotEnoughResources,
-    HoldingItem,
-}
-
-#[derive(Event)]
-pub struct FailedCraft {
-    pub recipe: Recipe,
-    pub reason: FailedCraftReason,
-}
-
 /// Process crafting requests
-fn try_craft_recipes(
+pub fn try_craft_recipes(
     mut reader: MessageReader<CraftRecipe>,
     stockpile_lut: Res<StockpileLut>,
     mut resources: Query<&mut ResourceStockpile>,
@@ -198,7 +152,7 @@ fn try_craft_recipes(
             }
 
             // Give item to player
-            let mut entity_commands = commands.spawn((held_item_bundle(player), recipe.product));
+            let mut entity_commands = commands.spawn((HeldItemBundle::new(player), recipe.product));
             recipe.product.add_extra_components(&mut entity_commands);
             let entity = entity_commands.id();
 

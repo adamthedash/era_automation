@@ -1,46 +1,15 @@
-use bevy::{platform::collections::HashMap, prelude::*};
+use bevy::prelude::*;
 
 use crate::{
-    crafting::Recipe,
-    items::ItemType,
-    player::HarvestEvent,
-    resources::{ResourceNodeType, ResourceType},
+    crafting::Recipe, items::ItemType, player::HarvestEvent, resources::ResourceType,
     village::DepositEvent,
 };
 
-pub struct KnowledgePlugin;
-impl Plugin for KnowledgePlugin {
-    fn build(&self, app: &mut App) {
-        app.init_resource::<GatheringStatistics>()
-            .add_systems(Startup, init_knowledge)
-            .add_systems(Update, check_unlocks)
-            .add_observer(update_harvest_statistics)
-            .add_observer(update_deposit_statistics);
-    }
-}
-
-#[derive(Component)]
-pub struct Unlocked;
-
-#[derive(Component, Debug)]
-pub struct UnlockName(pub String);
-
-pub enum UnlockRequirement {
-    TotalGathered {
-        resource: ResourceNodeType,
-        amount: usize,
-    },
-    TotalDeposited {
-        resource: ResourceType,
-        amount: usize,
-    },
-}
-#[derive(Component)]
-pub struct UnlockRequirements(pub Vec<UnlockRequirement>);
+use super::components::*;
 
 /// Initialise the knowledge
 /// TODO: Move to data file
-fn init_knowledge(mut commands: Commands) {
+pub fn init_knowledge(mut commands: Commands) {
     commands.spawn((
         UnlockName("Bowl".to_string()),
         UnlockRequirements(vec![
@@ -73,13 +42,8 @@ fn init_knowledge(mut commands: Commands) {
     ));
 }
 
-#[derive(Event)]
-pub struct UnlockEvent {
-    pub name: String,
-}
-
 /// Checks all of the knowledge and unlocks ones that have met their requirements
-fn check_unlocks(
+pub fn check_unlocks(
     query: Query<(Entity, &UnlockRequirements, &UnlockName), Without<Unlocked>>,
     stats: Res<GatheringStatistics>,
     mut commands: Commands,
@@ -104,21 +68,14 @@ fn check_unlocks(
     }
 }
 
-/// Tracks lifetime statistics for the player
-#[derive(Resource, Default)]
-struct GatheringStatistics {
-    nodes_gathered: HashMap<ResourceNodeType, usize>,
-    resources_deposited: HashMap<ResourceType, usize>,
-}
-
 /// Update lifetime statistics
-fn update_harvest_statistics(event: On<HarvestEvent>, mut stats: ResMut<GatheringStatistics>) {
+pub fn update_harvest_statistics(event: On<HarvestEvent>, mut stats: ResMut<GatheringStatistics>) {
     info!("Updating stats: {:?}", event);
     *stats.nodes_gathered.entry(event.resource_node).or_default() += event.amount;
 }
 
 /// Update lifetime statistics
-fn update_deposit_statistics(event: On<DepositEvent>, mut stats: ResMut<GatheringStatistics>) {
+pub fn update_deposit_statistics(event: On<DepositEvent>, mut stats: ResMut<GatheringStatistics>) {
     info!("Updating stats: {:?}", event);
     *stats.resources_deposited.entry(event.resource).or_default() += event.amount;
 }

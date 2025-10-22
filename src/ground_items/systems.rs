@@ -1,3 +1,4 @@
+use super::components::*;
 use std::f32;
 
 use bevy::prelude::*;
@@ -5,36 +6,11 @@ use bevy::prelude::*;
 use crate::{
     consts::{GROUND_ITEM_BOB_HEIGHT, GROUND_ITEM_BOB_SPEED, Z_GROUND_ITEM},
     map::WorldPos,
-    player::{HeldBy, Holding, Player, Targettable, Targetted, held_item_bundle},
-    utils::run_if::{empty_hands, key_just_pressed},
+    player::{HeldBy, HeldItemBundle, Holding, Player, Targettable, Targetted},
 };
 
-pub struct GroundItemPlugin;
-impl Plugin for GroundItemPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (
-                animate_items,
-                (drop_item, pickup_item.run_if(empty_hands))
-                    .run_if(key_just_pressed(KeyCode::KeyE)),
-            ),
-        );
-    }
-}
-
-#[derive(Component)]
-pub struct GroundItem;
-
-/// The duration along the animation's total time
-#[derive(Component, Default)]
-pub struct AnimationTime(f32);
-#[derive(Component)]
-#[require(AnimationTime)]
-pub struct AnimationCycleTime(f32);
-
 /// Bob the items up & down
-fn animate_items(
+pub fn animate_items(
     mut items: Query<
         (
             &WorldPos,
@@ -63,7 +39,7 @@ fn animate_items(
 }
 
 /// Drop an item on the ground
-fn drop_item(player: Single<(&WorldPos, &Holding), With<Player>>, mut commands: Commands) {
+pub fn drop_item(player: Single<(&WorldPos, &Holding), With<Player>>, mut commands: Commands) {
     info!("Dropping item");
 
     let held_item = player
@@ -94,7 +70,7 @@ fn drop_item(player: Single<(&WorldPos, &Holding), With<Player>>, mut commands: 
 }
 
 /// Pick up a nearby item from the ground
-fn pickup_item(
+pub fn pickup_item(
     ground_item: Single<Entity, (With<GroundItem>, With<Targetted>)>,
     player: Single<(Entity, &Transform), With<Player>>,
     mut commands: Commands,
@@ -113,5 +89,8 @@ fn pickup_item(
             WorldPos,
         )>()
         // Add holding related components
-        .insert(held_item_bundle(player.0));
+        .insert({
+            let player = player.0;
+            HeldItemBundle::new(player)
+        });
 }
