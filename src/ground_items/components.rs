@@ -26,7 +26,8 @@ pub struct GroundItemBundle {
     ground_marker: GroundItem,
     target_marker: Targettable,
     world_pos: WorldPos,
-    animation: AnimationCycleTime,
+    animation_time: AnimationTime,
+    animation_total: AnimationCycleTime,
     transform: Transform,
 }
 impl GroundItemBundle {
@@ -35,7 +36,8 @@ impl GroundItemBundle {
             ground_marker: GroundItem,
             target_marker: Targettable,
             world_pos: *world_pos,
-            animation: AnimationCycleTime(GROUND_ITEM_BOB_SPEED),
+            animation_time: AnimationTime(0.),
+            animation_total: AnimationCycleTime(GROUND_ITEM_BOB_SPEED),
             transform: world_pos.as_transform(Z_GROUND_ITEM),
         }
     }

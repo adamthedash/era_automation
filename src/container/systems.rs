@@ -2,36 +2,49 @@ use super::components::*;
 use bevy::prelude::*;
 
 use crate::{
-    consts::Z_CONTAINED_ITEM,
-    ground_items::{AnimationCycleTime, GroundItem},
+    ground_items::{GroundItem, GroundItemBundle},
+    items::ItemType,
     map::WorldPos,
-    player::{HeldBy, Targettable, Targetted},
+    player::{HeldBy, Player, Targetted},
 };
 
 /// Pick up a ground item and put it into the container
 pub fn contain_item(
-    item: Single<Entity, (With<GroundItem>, With<Targetted>)>,
-    container: Single<Entity, (With<Container>, With<HeldBy>)>,
+    item: Single<(Entity, &ItemType), (With<GroundItem>, With<Targetted>)>,
+    container: Single<(Entity, &ContainableItems), (With<Container>, With<HeldBy>)>,
     mut commands: Commands,
 ) {
-    info!("Containing item");
+    if !container.1.0.contains(item.1) {
+        // Item can't be put in this container
+        return;
+    }
 
-    // Move entity from world to player
-    let mut item = commands.entity(*item);
-    item.insert(ChildOf(*container));
+    info!("Containing item {:?}", item.0);
 
-    // Remove ground related components
-    item.remove::<(GroundItem, Targettable, AnimationCycleTime, WorldPos)>();
-
-    // Add containing related components
-    item.insert((
-        ContainedBy(*container),
-        // Render contained item above/behind container
-        Transform::from_xyz(0., 0.5, Z_CONTAINED_ITEM),
-    ));
+    commands
+        .entity(item.0)
+        // Remove ground related components
+        .remove::<GroundItemBundle>()
+        // Add containing related components
+        .insert(ContainedBundle::new(container.0));
 }
 
 /// Take an item out of the held container and put it on the ground
-pub fn uncontain_item(container: Single<Entity, (With<Container>, With<HeldBy>)>) {
-    info!("Un-containing item");
+pub fn uncontain_item(
+    container: Single<(Entity, &Contains), (With<Container>, With<HeldBy>)>,
+    player_pos: Single<&WorldPos, With<Player>>,
+    mut commands: Commands,
+) {
+    let item = container
+        .1
+        .iter()
+        .next()
+        .expect("System only runs when there are contained items");
+
+    info!("Un-containing item {:?}", item);
+
+    commands
+        .entity(item)
+        .remove::<ContainedBundle>()
+        .insert(GroundItemBundle::new(*player_pos));
 }

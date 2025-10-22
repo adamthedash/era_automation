@@ -6,11 +6,20 @@ use bevy::prelude::*;
 pub use components::*;
 use systems::*;
 
-use crate::utils::run_if::key_just_pressed;
+use crate::{player::Targetted, utils::run_if::key_just_pressed};
 
 pub struct ContainerPlugin;
 impl Plugin for ContainerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, contain_item.run_if(key_just_pressed(KeyCode::KeyC)));
+        app.add_systems(
+            Update,
+            (
+                contain_item,
+                uncontain_item
+                    // Target takes precedence
+                    .run_if(|targets: Query<(), With<Targetted>>| targets.is_empty()),
+            )
+                .run_if(key_just_pressed(KeyCode::KeyC)),
+        );
     }
 }
