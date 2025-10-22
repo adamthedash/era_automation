@@ -5,7 +5,7 @@ use era_automation::{
     crafting::CraftingPlugin,
     ground_items::GroundItemPlugin,
     knowledge::KnowledgePlugin,
-    map::{ChunkLUT, ChunkPos, CreateChunk, MapPlugin},
+    map::{ChunkLUT, ChunkPos, CreateChunk, MapPlugin, WorldPos},
     notification::NotificationPlugin,
     player::{Player, PlayerPlugin},
     resources::ResourcePlugin,
@@ -32,11 +32,11 @@ fn main() {
 
 /// Spawn chunks around the player if they're not generated yet
 fn spawn_chunks(
-    player: Single<&Transform, With<Player>>,
+    player: Single<&WorldPos, With<Player>>,
     mut messages: MessageWriter<CreateChunk>,
     chunk_lut: Res<ChunkLUT>,
 ) {
-    let player_chunk = ChunkPos::from_transform(&player);
+    let player_chunk = player.chunk();
 
     for x in -CHUNK_LOAD_RADIUS..=CHUNK_LOAD_RADIUS {
         for y in -CHUNK_LOAD_RADIUS..=CHUNK_LOAD_RADIUS {

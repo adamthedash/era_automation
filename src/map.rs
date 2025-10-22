@@ -5,7 +5,7 @@ use bevy::{
 };
 
 use crate::{
-    consts::{CHUNK_SIZE, TERRAIN_STARTING_RADIUS, TILE_DISPLAY_SIZE, TILE_RAW_SIZE},
+    consts::{CHUNK_SIZE, TERRAIN_STARTING_RADIUS},
     sprites::TerrainSprite,
     utils::{
         math::lerp,
@@ -49,12 +49,6 @@ impl TilePos {
 #[derive(Component, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct ChunkPos(pub IVec2);
 impl ChunkPos {
-    /// Convert from display-space transform
-    pub fn from_transform(transform: &Transform) -> Self {
-        let world_pos = WorldPos::from_transform(transform);
-        Self(world_pos.0.as_ivec2() / CHUNK_SIZE.as_ivec2())
-    }
-
     pub fn as_tile_pos(&self) -> TilePos {
         TilePos(self.0 * CHUNK_SIZE.as_ivec2())
     }
@@ -63,13 +57,12 @@ impl ChunkPos {
 #[derive(Component, Clone, Copy)]
 pub struct WorldPos(pub Vec2);
 impl WorldPos {
-    pub fn from_transform(transform: &Transform) -> Self {
-        Self(transform.translation.truncate() / TILE_DISPLAY_SIZE.as_vec2())
+    pub fn as_transform(&self, z: f32) -> Transform {
+        Transform::from_translation(self.0.extend(z))
     }
 
-    pub fn as_transform(&self, z: f32) -> Transform {
-        Transform::from_translation((self.0 * TILE_DISPLAY_SIZE.as_vec2()).extend(z))
-            .with_scale((TILE_DISPLAY_SIZE.as_vec2() / TILE_RAW_SIZE.as_vec2()).extend(1.))
+    pub fn chunk(&self) -> ChunkPos {
+        ChunkPos(self.0.div_euclid(CHUNK_SIZE.as_vec2()).as_ivec2())
     }
 }
 
@@ -144,31 +137,32 @@ pub fn create_chunks(
     asset_server: Res<AssetServer>,
     generator: Res<WorldGenerator>,
 ) {
-    for CreateChunk(pos) in messages.read() {
-        info!("Spawning chunk entity: {:?}", pos.0);
+    for CreateChunk(chunk_pos) in messages.read() {
+        info!("Spawning chunk entity: {:?}", chunk_pos.0);
         let mut chunk = commands.spawn((
-            *pos,
+            *chunk_pos,
             Transform::from_translation(
                 // +0.5 chunks so TileMapChunk is rendered from its origin
                 // -0.5 tiles so resource sprites are aligned properly
-                (((pos.0.as_vec2() + Vec2::splat(0.5)) * CHUNK_SIZE.as_vec2() - Vec2::splat(0.5))
-                    * TILE_DISPLAY_SIZE.as_vec2())
+                ((chunk_pos.0.as_vec2() + Vec2::splat(0.5)) * CHUNK_SIZE.as_vec2()
+                    - Vec2::splat(0.5))
                 .extend(0.),
             ),
             Visibility::default(),
             // Terrain data
-            generator.generate_terrain(*pos),
+            generator.generate_terrain(*chunk_pos),
             // Render
             TilemapChunk {
                 chunk_size: CHUNK_SIZE,
-                tile_display_size: TILE_DISPLAY_SIZE,
+                // Render tiles to unit square
+                tile_display_size: UVec2::ONE,
                 tileset: asset_server.load("terrain_sheet.png"),
                 ..Default::default()
             },
             TilemapChunkTileData(vec![None; CHUNK_SIZE.element_product() as usize]),
         ));
 
-        chunk_lut.0.insert(*pos, chunk.id());
+        chunk_lut.0.insert(*chunk_pos, chunk.id());
         chunk.trigger(ChunkCreated);
     }
 }

@@ -4,11 +4,10 @@ use bevy::prelude::*;
 
 use crate::{
     consts::{
-        GROUND_ITEM_BOB_HEIGHT, GROUND_ITEM_BOB_SPEED, TILE_DISPLAY_SIZE, Z_GROUND_ITEM,
-        Z_HELD_ITEM,
+        GROUND_ITEM_BOB_HEIGHT, GROUND_ITEM_BOB_SPEED, Z_GROUND_ITEM,
     },
     map::WorldPos,
-    player::{HeldBy, Holding, Player, Targettable, Targetted},
+    player::{HeldBy, Holding, Player, Targettable, Targetted, held_item_bundle},
     utils::run_if::{empty_hands, key_just_pressed},
 };
 
@@ -103,20 +102,10 @@ fn pickup_item(
     mut commands: Commands,
 ) {
     info!("Picking up item");
-    // Move entity from world to player
-    let mut item = commands.entity(*ground_item);
-    item.insert(ChildOf(player.0));
-
-    // Remove ground related components
-    item.remove::<(GroundItem, Targettable, AnimationCycleTime, WorldPos)>();
-
-    // Add holding related components
-    item.insert((
-        HeldBy(player.0),
-        Transform::from_translation(
-            // Need to un-scale so offset is ok
-            (Vec2::splat(0.5) * TILE_DISPLAY_SIZE.as_vec2() / player.1.scale.truncate())
-                .extend(Z_HELD_ITEM),
-        ),
-    ));
+    commands
+        .entity(*ground_item)
+        // Remove ground related components
+        .remove::<(GroundItem, Targettable, AnimationCycleTime, WorldPos)>()
+        // Add holding related components
+        .insert(held_item_bundle(player.0));
 }

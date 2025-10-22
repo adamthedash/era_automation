@@ -6,7 +6,8 @@ use bevy::{
 
 use crate::{
     consts::{
-        HIGHLIGHT_SCALE, PLAYER_REACH, PLAYER_SPEED, RESOURCE_PICKUP_AMOUNT, TILE_DISPLAY_SIZE, Z_HELD_ITEM, Z_PLAYER,
+        CAMERA_ZOOM, HIGHLIGHT_SCALE, PLAYER_REACH, PLAYER_SPEED, RESOURCE_PICKUP_AMOUNT,
+        Z_HELD_ITEM, Z_PLAYER,
     },
     items::ItemType,
     map::{ChunkLUT, TerrainData, TilePos, WorldPos},
@@ -44,21 +45,22 @@ impl Plugin for PlayerPlugin {
 pub struct Player;
 pub fn setup_player(mut commands: Commands, sprite_sheets: Res<SpriteSheets>) {
     let world_pos = WorldPos(Vec2::ZERO);
-    commands.spawn((Camera2d, world_pos, Transform::IDENTITY));
-
     commands.spawn((
-        Player,
+        Camera2d,
         world_pos,
-        // Render
-        world_pos.as_transform(Z_PLAYER),
-        Sprite::from_atlas_image(
-            sprite_sheets.entities.image.clone(),
-            TextureAtlas {
-                layout: sprite_sheets.entities.layout.clone(),
-                index: EntitySprite::Player as usize,
-            },
-        ),
+        Transform::from_scale(Vec2::splat(1. / CAMERA_ZOOM).extend(1.)),
     ));
+
+    let player = commands
+        .spawn((
+            Player,
+            world_pos,
+            // Render
+            world_pos.as_transform(Z_PLAYER),
+        ))
+        .id();
+
+    EntitySprite::Player.spawn_sprite(&mut commands, &sprite_sheets, Some(player));
 }
 
 pub fn move_player(
@@ -177,7 +179,7 @@ pub struct HarvestEvent {
 /// Pick up a resource and put it in the player's hand
 fn harvest_resource(
     mut commands: Commands,
-    player: Single<EntityRef, With<Player>>,
+    player: Single<Entity, With<Player>>,
     mut targetted_resources: Populated<
         (Entity, &ResourceNodeType, &ItemType, &mut ResourceAmount),
         (With<ResourceMarker>, With<Targetted>, Without<Player>),
@@ -194,14 +196,16 @@ fn harvest_resource(
     let pickup_amount = RESOURCE_PICKUP_AMOUNT.min(amount.0);
 
     // Add item to player
-    commands.spawn((
-        held_item_bundle(*player),
-        // Game data
-        *item_type,
-        ResourceAmount(pickup_amount),
-        // Render
-        item_type.get_sprite(&sprite_sheets),
-    ));
+    let entity = commands
+        .spawn((
+            held_item_bundle(*player),
+            // Game data
+            *item_type,
+            ResourceAmount(pickup_amount),
+        ))
+        .id();
+
+    item_type.spawn_sprite(&mut commands, &sprite_sheets, Some(entity));
 
     // Remove resource if it's depleted
     if amount.0 == pickup_amount {
@@ -268,13 +272,13 @@ fn check_near_water(
 struct WaterIcon;
 /// Shows the water icon when the player is near the water
 fn show_water_icon(
-    player: Single<(Entity, Has<NearWater>, &Transform, Has<Holding>), With<Player>>,
+    player: Single<(Entity, Has<NearWater>, Has<Holding>), With<Player>>,
     targets: Query<(), With<Targetted>>,
     water_icon: Option<Single<Entity, With<WaterIcon>>>,
     mut commands: Commands,
     sprite_sheets: Res<SpriteSheets>,
 ) {
-    let (player, near_water, transform, held_item) = *player;
+    let (player, near_water, held_item) = *player;
 
     debug!(
         "targets {:?} water {:?} holding {:?}",
@@ -287,18 +291,16 @@ fn show_water_icon(
     match (show_icon, water_icon) {
         (true, None) => {
             // Spawn icon as child to player
-            commands.entity(player).with_child((
-                WaterIcon,
-                // Render
-                Transform::from_translation(
-                    (Vec2::splat(-0.5) * TILE_DISPLAY_SIZE.as_vec2()
-                // Need to un-scale so offset is ok
-                / transform.scale.truncate())
-                    // Z == 1 for held items
-                    .extend(1.),
-                ),
-                ItemSprite::Water.get_sprite(&sprite_sheets),
-            ));
+            let icon_entity = commands
+                .spawn((
+                    ChildOf(player),
+                    WaterIcon,
+                    // Render
+                    Transform::from_xyz(-0.5, -0.5, Z_HELD_ITEM),
+                ))
+                .id();
+
+            ItemSprite::Water.spawn_sprite(&mut commands, &sprite_sheets, Some(icon_entity));
         }
         (false, Some(entity)) => {
             // Despawn the icon
@@ -309,38 +311,32 @@ fn show_water_icon(
 }
 
 /// Bundle of components for spawning a held item for the the player
-pub fn held_item_bundle(player: EntityRef) -> impl Bundle {
-    let transform = player
-        .get::<Transform>()
-        .expect("Player does not have transform component!");
-
+pub fn held_item_bundle(player: Entity) -> impl Bundle {
     (
-        ChildOf(player.id()),
-        HeldBy(player.id()),
-        // Render
-        Transform::from_translation(
-            // Need to un-scale so offset is ok
-            (Vec2::splat(0.5) * TILE_DISPLAY_SIZE.as_vec2() / transform.scale.truncate())
-                .extend(Z_HELD_ITEM),
-        ),
+        ChildOf(player),
+        HeldBy(player),
+        // Render off to the side of the player
+        Transform::from_xyz(0.5, 0.5, Z_HELD_ITEM),
     )
 }
 
 /// Pick up some water from an infinite source
 fn harvest_water(
     mut commands: Commands,
-    player: Single<EntityRef, (With<Player>, With<NearWater>)>,
+    player: Single<Entity, (With<Player>, With<NearWater>)>,
     sprite_sheets: Res<SpriteSheets>,
 ) {
     // Add item to player
-    commands.spawn((
-        held_item_bundle(*player),
-        // Game data
-        ItemType::Water,
-        ResourceAmount(RESOURCE_PICKUP_AMOUNT),
-        // Render
-        ItemSprite::Water.get_sprite(&sprite_sheets),
-    ));
+    let entity = commands
+        .spawn((
+            held_item_bundle(*player),
+            // Game data
+            ItemType::Water,
+            ResourceAmount(RESOURCE_PICKUP_AMOUNT),
+        ))
+        .id();
+
+    ItemSprite::Water.spawn_sprite(&mut commands, &sprite_sheets, Some(entity));
 
     commands.trigger(HarvestEvent {
         resource_node: ResourceNodeType::Water,

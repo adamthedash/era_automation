@@ -48,7 +48,7 @@ impl ResourceNodeType {
 }
 
 impl GetSprite for ResourceNodeType {
-    fn get_sprite(self, sprite_sheets: &SpriteSheets) -> Sprite {
+    fn get_sprite(&self, sprite_sheets: &SpriteSheets) -> Sprite {
         self.sprite().get_sprite(sprite_sheets)
     }
 }
@@ -100,21 +100,25 @@ fn spawn_resources(
                 }
 
                 let (node_type, item_type) = *utils::rand::choice(&choices, &weights);
-                let entity = commands.spawn((
-                    // Game data
-                    tile_pos,
-                    item_type,
-                    node_type,
-                    // TODO: Resource amount spawn logic
-                    ResourceAmount(RESOURCE_SPAWN_AMOUNT),
-                    ResourceMarker,
-                    Targettable,
-                    // Render
-                    tile_pos.as_transform(Z_RESOURCES),
-                    node_type.get_sprite(&sprite_sheets),
-                ));
+                let entity = commands
+                    .spawn((
+                        // Game data
+                        tile_pos,
+                        item_type,
+                        node_type,
+                        // TODO: Resource amount spawn logic
+                        ResourceAmount(RESOURCE_SPAWN_AMOUNT),
+                        ResourceMarker,
+                        Targettable,
+                        // Render
+                        tile_pos.as_transform(Z_RESOURCES),
+                    ))
+                    .id();
 
-                resources.0.insert(tile_pos, entity.id());
+                // Add sprite as child
+                node_type.spawn_sprite(&mut commands, &sprite_sheets, Some(entity));
+
+                resources.0.insert(tile_pos, entity);
             }
         }
     }

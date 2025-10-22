@@ -5,8 +5,8 @@ pub const PLAYER_SPEED: f32 = 4.;
 
 /// Size tiles are stored in the sprite sheet
 pub const TILE_RAW_SIZE: UVec2 = UVec2::splat(16);
-/// Size tiles are displayed on screen
-pub const TILE_DISPLAY_SIZE: UVec2 = UVec2::splat(32);
+// How many pixels per world unit
+pub const CAMERA_ZOOM: f32 = 32.;
 
 /// Number of tiles per chunk
 pub const CHUNK_SIZE: UVec2 = UVec2::splat(16);
@@ -41,7 +41,7 @@ pub const RESOURCE_SPAWN_AMOUNT: usize = 2;
 
 /// Amount items bob up/down
 pub const GROUND_ITEM_BOB_HEIGHT: f32 = 0.5;
-/// Time per bob cycle
+/// Seconds per bob cycle
 pub const GROUND_ITEM_BOB_SPEED: f32 = 2.;
 
 /// How much a sprite is scaled up when being highlighted

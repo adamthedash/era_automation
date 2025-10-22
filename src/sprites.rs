@@ -57,7 +57,26 @@ pub enum ItemSprite {
 
 pub trait GetSprite {
     /// Get a sprite handle that can be added to an entity
-    fn get_sprite(self, sprite_sheets: &SpriteSheets) -> Sprite;
+    fn get_sprite(&self, sprite_sheets: &SpriteSheets) -> Sprite;
+
+    /// Spawn a sprite with a transform to normalise it into unit square
+    fn spawn_sprite(
+        &self,
+        commands: &mut Commands,
+        sprite_sheets: &SpriteSheets,
+        parent: Option<Entity>,
+    ) -> Entity {
+        let mut entity = commands.spawn((
+            self.get_sprite(sprite_sheets),
+            Transform::from_scale(1. / TILE_RAW_SIZE.as_vec2().extend(1.)),
+        ));
+
+        if let Some(parent) = parent {
+            entity.insert(ChildOf(parent));
+        }
+
+        entity.id()
+    }
 }
 
 impl From<ResourceSprite> for usize {
@@ -67,12 +86,31 @@ impl From<ResourceSprite> for usize {
 }
 
 impl GetSprite for ResourceSprite {
-    fn get_sprite(self, sprite_sheets: &SpriteSheets) -> Sprite {
+    fn get_sprite(&self, sprite_sheets: &SpriteSheets) -> Sprite {
         Sprite {
             image: sprite_sheets.resources.image.clone(),
             texture_atlas: Some(TextureAtlas {
                 layout: sprite_sheets.resources.layout.clone(),
-                index: self.into(),
+                index: (*self).into(),
+            }),
+            ..Default::default()
+        }
+    }
+}
+
+impl From<EntitySprite> for usize {
+    fn from(val: EntitySprite) -> Self {
+        val as usize
+    }
+}
+
+impl GetSprite for EntitySprite {
+    fn get_sprite(&self, sprite_sheets: &SpriteSheets) -> Sprite {
+        Sprite {
+            image: sprite_sheets.entities.image.clone(),
+            texture_atlas: Some(TextureAtlas {
+                layout: sprite_sheets.entities.layout.clone(),
+                index: (*self).into(),
             }),
             ..Default::default()
         }
@@ -86,12 +124,12 @@ impl From<ItemSprite> for usize {
 }
 
 impl GetSprite for ItemSprite {
-    fn get_sprite(self, sprite_sheets: &SpriteSheets) -> Sprite {
+    fn get_sprite(&self, sprite_sheets: &SpriteSheets) -> Sprite {
         Sprite {
             image: sprite_sheets.items.image.clone(),
             texture_atlas: Some(TextureAtlas {
                 layout: sprite_sheets.items.layout.clone(),
-                index: self.into(),
+                index: (*self).into(),
             }),
             ..Default::default()
         }

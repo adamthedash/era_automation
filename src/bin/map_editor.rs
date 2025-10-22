@@ -3,7 +3,7 @@ use bevy_egui::{EguiContexts, EguiPlugin, EguiPrimaryContextPass, egui};
 use era_automation::{
     consts::CHUNK_LOAD_RADIUS,
     map::{
-        ChunkLUT, ChunkPos, CreateChunk, WorldGenerator, create_chunks, init_world_gen,
+        ChunkLUT, ChunkPos, CreateChunk, WorldGenerator, WorldPos, create_chunks, init_world_gen,
         update_transforms,
     },
     player::{Player, move_player, setup_player},
@@ -43,11 +43,11 @@ impl Plugin for MapPlugin {
 
 /// Spawn chunks around the player if they're not generated yet
 fn spawn_chunks(
-    player: Single<&Transform, With<Player>>,
+    player: Single<&WorldPos, With<Player>>,
     mut messages: MessageWriter<CreateChunk>,
     chunk_lut: Res<ChunkLUT>,
 ) {
-    let player_chunk = ChunkPos::from_transform(&player);
+    let player_chunk = player.chunk();
 
     for x in -CHUNK_LOAD_RADIUS..=CHUNK_LOAD_RADIUS {
         for y in -CHUNK_LOAD_RADIUS..=CHUNK_LOAD_RADIUS {

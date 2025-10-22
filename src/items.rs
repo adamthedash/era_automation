@@ -36,7 +36,7 @@ impl ItemType {
     }
 
     /// Adds extra item-specific components to an entity
-    pub fn add_extra_components(&self, mut commands: EntityCommands) {
+    pub fn add_extra_components(&self, commands: &mut EntityCommands) {
         use ItemType::*;
         if self == &Bowl {
             commands.insert((
@@ -52,7 +52,7 @@ impl ItemType {
 }
 
 impl GetSprite for ItemType {
-    fn get_sprite(self, sprite_sheets: &SpriteSheets) -> Sprite {
+    fn get_sprite(&self, sprite_sheets: &SpriteSheets) -> Sprite {
         self.sprite_type().get_sprite(sprite_sheets)
     }
 }

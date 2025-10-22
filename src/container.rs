@@ -47,7 +47,11 @@ pub fn contain_item(
     item.remove::<(GroundItem, Targettable, AnimationCycleTime, WorldPos)>();
 
     // Add containing related components
-    item.insert((ContainedBy(*container), Transform::from_xyz(0., 0., 1.)));
+    item.insert((
+        ContainedBy(*container),
+        // Render contained item above/behind container
+        Transform::from_xyz(0., 0.5, -1.),
+    ));
 }
 
 /// Take an item out of the held container and put it on the ground

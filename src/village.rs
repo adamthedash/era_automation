@@ -7,7 +7,7 @@ use crate::{
     map::TilePos,
     player::{HeldBy, Targettable, Targetted},
     resources::{ResourceAmount, ResourceType},
-    sprites::{ResourceSprite, SpriteSheets},
+    sprites::{GetSprite, ResourceSprite, SpriteSheets},
     utils::run_if::key_just_pressed,
 };
 
@@ -126,22 +126,18 @@ pub fn update_resource_display(
 #[derive(Component)]
 pub struct VillageCentre;
 /// Spawn the village centre that's used to deposit items
-fn spawn_village_centre(mut commands: Commands, sprite_sheet: Res<SpriteSheets>) {
+fn spawn_village_centre(mut commands: Commands, sprite_sheets: Res<SpriteSheets>) {
     let pos = TilePos(IVec2::ZERO);
-    commands.spawn((
-        pos,
-        pos.as_transform(Z_RESOURCES),
-        Sprite {
-            image: sprite_sheet.resources.image.clone(),
-            texture_atlas: Some(TextureAtlas {
-                layout: sprite_sheet.resources.layout.clone(),
-                index: ResourceSprite::House as usize,
-            }),
-            ..Default::default()
-        },
-        VillageCentre,
-        Targettable,
-    ));
+    let village = commands
+        .spawn((
+            pos,
+            pos.as_transform(Z_RESOURCES),
+            VillageCentre,
+            Targettable,
+        ))
+        .id();
+
+    ResourceSprite::House.spawn_sprite(&mut commands, &sprite_sheets, Some(village));
 }
 
 #[derive(Debug, Event)]

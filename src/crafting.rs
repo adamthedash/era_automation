@@ -156,7 +156,7 @@ fn try_craft_recipes(
     mut reader: MessageReader<CraftRecipe>,
     stockpile_lut: Res<StockpileLut>,
     mut resources: Query<&mut ResourceStockpile>,
-    player: Single<(EntityRef, Has<Holding>), (With<Player>, Without<ResourceStockpile>)>,
+    player: Single<(Entity, Has<Holding>), (With<Player>, Without<ResourceStockpile>)>,
     sprite_sheets: Res<SpriteSheets>,
     mut commands: Commands,
 ) {
@@ -198,13 +198,13 @@ fn try_craft_recipes(
             }
 
             // Give item to player
-            let entity_commands = commands.spawn((
-                held_item_bundle(player),
-                recipe.product,
-                recipe.product.get_sprite(&sprite_sheets),
-            ));
+            let mut entity_commands = commands.spawn((held_item_bundle(player), recipe.product));
+            recipe.product.add_extra_components(&mut entity_commands);
+            let entity = entity_commands.id();
 
-            recipe.product.add_extra_components(entity_commands);
+            recipe
+                .product
+                .spawn_sprite(&mut commands, &sprite_sheets, Some(entity));
         } else {
             // Not enough resources
             commands.trigger(FailedCraft {
