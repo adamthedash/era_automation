@@ -47,6 +47,10 @@ impl WorldPos {
     pub fn chunk(&self) -> ChunkPos {
         ChunkPos(self.0.div_euclid(CHUNK_SIZE.as_vec2()).as_ivec2())
     }
+
+    pub fn tile(&self) -> TilePos {
+        TilePos(self.0.floor().as_ivec2())
+    }
 }
 
 /// Game data friendly storage for terrain tiles

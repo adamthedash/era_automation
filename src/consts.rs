@@ -48,3 +48,6 @@ pub const GROUND_ITEM_BOB_SPEED: f32 = 2.;
 
 /// How much a sprite is scaled up when being highlighted
 pub const HIGHLIGHT_SCALE: f32 = 1.2;
+
+/// How fast items roll down a hill.
+pub const ITEM_ROLL_SPEED: f32 = 5.;

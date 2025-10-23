@@ -16,6 +16,7 @@ impl Plugin for GroundItemPlugin {
                 animate_items,
                 (drop_item, pickup_item.run_if(empty_hands))
                     .run_if(key_just_pressed(KeyCode::KeyE)),
+                roll_items,
             ),
         );
     }
