@@ -13,9 +13,12 @@ impl Plugin for DebugPlugin {
         app.init_resource::<GradientArrowLUT>()
             .init_resource::<GradientArrowsEnabled>()
             .add_systems(
+                Update,
+                toggle_gradient_arrows.run_if(key_just_pressed(KeyCode::KeyG)),
+            )
+            .add_systems(
                 FixedUpdate,
                 (
-                    toggle_gradient_arrows.run_if(key_just_pressed(KeyCode::KeyG)),
                     (spawn_gradient_arrows, update_gradient_arrows)
                         .chain()
                         .run_if(resource_equals(GradientArrowsEnabled(true))),
