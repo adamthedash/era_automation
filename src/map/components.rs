@@ -84,7 +84,7 @@ impl WorldGenerator {
                     // Ensure the starting zone isn't water by biasing towards grass
 
                     height = lerp_f32(
-                        0.4,
+                        0.01,
                         height,
                         distance_from_centre.isqrt() as f32 / TERRAIN_STARTING_RADIUS as f32,
                     );

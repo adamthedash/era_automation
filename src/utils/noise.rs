@@ -104,7 +104,7 @@ pub fn perlin_stack(
         .map(|((f, a), o)| {
             ImprovedPerlin::<2>::new(seed)
                 .mod_input([256.; _])
-                .scale([f; 2])
+                .scale([f; _])
                 .translate([o; _])
                 .mul(a)
         })

@@ -3,6 +3,7 @@ use era_automation::{
     consts::CHUNK_LOAD_RADIUS,
     container::ContainerPlugin,
     crafting::CraftingPlugin,
+    debug::DebugPlugin,
     ground_items::GroundItemPlugin,
     knowledge::KnowledgePlugin,
     map::{ChunkLUT, ChunkPos, CreateChunk, MapPlugin, WorldPos},
@@ -26,6 +27,7 @@ fn main() {
         .add_plugins(CraftingPlugin)
         .add_plugins(GroundItemPlugin)
         .add_plugins(ContainerPlugin)
+        .add_plugins(DebugPlugin)
         .add_systems(Update, spawn_chunks)
         .run();
 }
