@@ -6,6 +6,7 @@ use era_automation::{
     debug::DebugPlugin,
     ground_items::GroundItemPlugin,
     knowledge::KnowledgePlugin,
+    machines::MachinePlugin,
     map::{ChunkLUT, ChunkPos, CreateChunk, MapPlugin, WorldPos},
     notification::NotificationPlugin,
     player::{Player, PlayerPlugin},
@@ -28,6 +29,7 @@ fn main() {
         .add_plugins(GroundItemPlugin)
         .add_plugins(ContainerPlugin)
         .add_plugins(DebugPlugin)
+        .add_plugins(MachinePlugin)
         .add_systems(Update, spawn_chunks)
         .run();
 }

@@ -18,7 +18,7 @@ use crate::{
 pub fn spawn_resources(
     event: On<ChunkCreated>,
     mut commands: Commands,
-    mut resources: ResMut<ResourceNodes>,
+    mut resources: ResMut<ResourceNodeLUT>,
     sprite_sheets: Res<SpriteSheets>,
     chunks: Query<(&ChunkPos, &TerrainData)>,
 ) {

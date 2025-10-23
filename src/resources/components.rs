@@ -44,7 +44,7 @@ pub struct ResourceAmount(pub usize);
 
 /// Sparse lookup for all resource node entities spawned in the world
 #[derive(Resource, Default)]
-pub struct ResourceNodes(pub HashMap<TilePos, Entity>);
+pub struct ResourceNodeLUT(pub HashMap<TilePos, Entity>);
 
 /// Marker for a resource node
 #[derive(Component)]

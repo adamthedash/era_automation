@@ -9,6 +9,7 @@ pub mod debug;
 pub mod ground_items;
 pub mod items;
 pub mod knowledge;
+pub mod machines;
 pub mod map;
 pub mod notification;
 pub mod player;
