@@ -3,10 +3,7 @@ use bevy::{platform::collections::HashMap, prelude::*};
 use crate::{
     consts::{CHUNK_SIZE, TERRAIN_STARTING_RADIUS},
     sprites::TerrainSprite,
-    utils::{
-        math::{lerp_f32, lerp_f64},
-        noise::MyGenerator,
-    },
+    utils::{math::lerp_f32, noise::MyGenerator},
 };
 
 /// Discrete tile locations - World space
@@ -105,8 +102,11 @@ impl WorldGenerator {
                 }
 
                 let tile = match height {
-                    -1_f32..0. => TerrainSprite::Water,
-                    0_f32..=1. => TerrainSprite::Grass,
+                    -1.0..0.0 => TerrainSprite::Water,
+                    0.0..=0.4 => TerrainSprite::Grass,
+                    0.4..=0.6 => TerrainSprite::Dirt,
+                    0.6..=0.75 => TerrainSprite::Rock,
+                    0.75..=0.9 => TerrainSprite::Snow,
                     _ => unreachable!("Generated sample with value: {height}"),
                 };
 

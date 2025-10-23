@@ -8,6 +8,9 @@ pub enum TerrainSprite {
     #[default]
     Grass,
     Water,
+    Dirt,
+    Rock,
+    Snow,
 }
 
 /// Indexes into resource_sprites.png
