@@ -3,7 +3,7 @@ use bevy::{
     sprite_render::{TileData, TilemapChunk, TilemapChunkTileData},
 };
 
-use crate::{consts::CHUNK_SIZE, utils::noise::perlin_stack};
+use crate::{consts::CHUNK_SIZE, ground_items::GroundItem, utils::noise::perlin_stack};
 
 use super::components::*;
 
@@ -53,7 +53,9 @@ pub fn create_chunks(
 }
 
 /// Update the transforms when WorldPos changes
-pub fn update_transforms(query: Query<(&WorldPos, &mut Transform), Changed<WorldPos>>) {
+pub fn update_transforms(
+    query: Query<(&WorldPos, &mut Transform), (Changed<WorldPos>, Without<GroundItem>)>,
+) {
     for (world_pos, mut transform) in query {
         let new_transform = world_pos.as_transform(transform.translation.z);
         transform.translation = new_transform.translation;
