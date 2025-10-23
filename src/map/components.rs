@@ -77,8 +77,20 @@ impl WorldGenerator {
             for xo in 0..CHUNK_SIZE.x {
                 let pos = world_pos.0 + UVec2::new(xo, yo).as_ivec2();
 
-                height_data.0[yo as usize][xo as usize] =
-                    self.height.sample([pos.x as f64, pos.y as f64]) as f32;
+                let mut height = self.height.sample([pos.x as f64, pos.y as f64]) as f32;
+
+                let distance_from_centre = pos.length_squared();
+                if distance_from_centre < TERRAIN_STARTING_RADIUS.pow(2) {
+                    // Ensure the starting zone isn't water by biasing towards grass
+
+                    height = lerp_f32(
+                        0.4,
+                        height,
+                        distance_from_centre.isqrt() as f32 / TERRAIN_STARTING_RADIUS as f32,
+                    );
+                }
+
+                height_data.0[yo as usize][xo as usize] = height;
             }
         }
 
@@ -86,27 +98,12 @@ impl WorldGenerator {
         let mut terrain_data = TerrainData::default();
         for (yo, row) in (0..CHUNK_SIZE.y).zip(&height_data.0) {
             for (xo, height) in (0..CHUNK_SIZE.x).zip(row) {
-                let pos = world_pos.0 + UVec2::new(xo, yo).as_ivec2();
-
-                let mut height = *height;
-
-                let distance_from_centre = pos.length_squared();
-                if distance_from_centre < TERRAIN_STARTING_RADIUS.pow(2) {
-                    // Ensure the starting zone isn't water by biasing towards grass
-
-                    height = lerp_f32(
-                        0.5,
-                        height,
-                        distance_from_centre.isqrt() as f32 / TERRAIN_STARTING_RADIUS as f32,
-                    );
-                }
-
                 let tile = match height {
                     -1.0..0.0 => TerrainSprite::Water,
                     0.0..=0.4 => TerrainSprite::Grass,
                     0.4..=0.6 => TerrainSprite::Dirt,
                     0.6..=0.75 => TerrainSprite::Rock,
-                    0.75..=0.9 => TerrainSprite::Snow,
+                    0.75..=1.0 => TerrainSprite::Snow,
                     _ => unreachable!("Generated sample with value: {height}"),
                 };
 
@@ -114,54 +111,8 @@ impl WorldGenerator {
             }
         }
 
-        // Calculate local gradient with sobel filter
-        // TODO: Proper handling of edges
-        let mut gradient_data = GradientData::default();
-        let h = &height_data.0;
-        for i in 0..CHUNK_SIZE.y as usize {
-            for j in 0..CHUNK_SIZE.x as usize {
-                // Unpack values
-                let h00 = if i == 0 || j == 0 {
-                    0.
-                } else {
-                    h[i - 1][j - 1]
-                };
-                let h01 = if i == 0 { 0. } else { h[i - 1][j] };
-                let h02 = if i == 0 || j == CHUNK_SIZE.x as usize - 1 {
-                    0.
-                } else {
-                    h[i - 1][j + 1]
-                };
-                let h10 = if j == 0 { 0. } else { h[i][j - 1] };
-                let h12 = if j == CHUNK_SIZE.x as usize - 1 {
-                    0.
-                } else {
-                    h[i][j + 1]
-                };
-
-                let h20 = if i == CHUNK_SIZE.y as usize - 1 || j == 0 {
-                    0.
-                } else {
-                    h[i + 1][j - 1]
-                };
-                let h21 = if i == CHUNK_SIZE.y as usize - 1 {
-                    0.
-                } else {
-                    h[i + 1][j]
-                };
-                let h22 = if i == CHUNK_SIZE.y as usize - 1 || j == CHUNK_SIZE.x as usize - 1 {
-                    0.
-                } else {
-                    h[i + 1][j + 1]
-                };
-
-                // Compute axis gradients
-                let gy = (h20 + 2. * h21 + h22) - (h00 + 2. * h01 + h02);
-                let gx = (h02 + 2. * h12 + h22) - (h00 + 2. * h10 + h20);
-
-                gradient_data.0[i][j] = Vec2::new(gx, gy);
-            }
-        }
+        // Gradient data will be updated elsewhere
+        let gradient_data = GradientData::default();
 
         (height_data, terrain_data, gradient_data)
     }
@@ -178,3 +129,7 @@ pub struct CreateChunk(pub ChunkPos);
 /// Event emitted after a chunk is created
 #[derive(EntityEvent)]
 pub struct ChunkCreated(pub Entity);
+
+/// Message to recompute the height gradients for a chunk
+#[derive(Message)]
+pub struct RecomputeGradient(pub ChunkPos);
