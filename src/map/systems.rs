@@ -10,7 +10,7 @@ use super::components::*;
 /// Set up the world generation
 pub fn init_world_gen(mut commands: Commands) {
     commands.insert_resource(WorldGenerator {
-        terrain: Box::new(perlin_stack(42, 4, 1., 0.5, 1. / 16., 0.)),
+        height: Box::new(perlin_stack(42, 4, 1., 0.5, 1. / 16., 0.)),
     });
 }
 /// Initialises a new chunk at a given position

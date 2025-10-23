@@ -17,6 +17,7 @@ pub enum ResourceSprite {
     Tree,
     Bush,
     House,
+    DebugArrow,
 }
 
 /// Indexes into entity_sheet.png

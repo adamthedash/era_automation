@@ -106,7 +106,7 @@ fn change_terrain_gen(mut world_gen: ResMut<WorldGenerator>, config: Res<WorldGe
         return;
     }
 
-    world_gen.terrain = Box::new(perlin_stack(
+    world_gen.height = Box::new(perlin_stack(
         config.seed,
         config.num_octaves,
         config.amplitude,
