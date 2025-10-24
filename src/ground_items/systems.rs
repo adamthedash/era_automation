@@ -4,7 +4,7 @@ use std::f32;
 use bevy::prelude::*;
 
 use crate::{
-    consts::{GROUND_ITEM_BOB_HEIGHT, ITEM_ROLL_SPEED},
+    consts::{GROUND_ITEM_BOB_HEIGHT, ITEM_ROLL_SPEED, ROLL_FRICTION},
     map::{ChunkLUT, GradientData, WorldPos},
     player::{HeldItemBundle, Holding, Player, Targetted},
 };
@@ -92,8 +92,13 @@ pub fn roll_items(
 
         let tile_gradient = gradients.0[offset.y as usize][offset.x as usize];
 
+        if tile_gradient.length_squared() < ROLL_FRICTION.powi(2) {
+            // Ground isn't steep enough to roll
+            continue;
+        }
+
         // Roll the item dowmhill
-        // TODO: Friction, rollability, etc.
+        // TODO: rollability, etc.
         item_pos.0 -= tile_gradient * timer.delta_secs() * ITEM_ROLL_SPEED;
     }
 }

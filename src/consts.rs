@@ -51,3 +51,5 @@ pub const HIGHLIGHT_SCALE: f32 = 1.2;
 
 /// How fast items roll down a hill.
 pub const ITEM_ROLL_SPEED: f32 = 5.;
+/// Minimum slope required for something to roll
+pub const ROLL_FRICTION: f32 = 0.1;
