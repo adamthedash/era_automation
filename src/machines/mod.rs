@@ -14,7 +14,10 @@ impl Plugin for MachinePlugin {
             .add_systems(FixedUpdate, tick_harvesters)
             .add_systems(
                 Update,
-                spawn_harvester.run_if(key_just_pressed(KeyCode::KeyM)),
+                (
+                    spawn_harvester.run_if(key_just_pressed(KeyCode::KeyM)),
+                    animate_machine,
+                ),
             );
     }
 }

@@ -3,7 +3,7 @@ use bevy::{
     prelude::*,
 };
 
-use crate::{map::TilePos, resources::ResourceNodeType};
+use crate::{map::TilePos, resources::ResourceNodeType, sprites::EntitySprite};
 
 /// Marker for machines
 #[derive(Component)]
@@ -31,3 +31,11 @@ pub struct HarvestableNodes(pub HashSet<ResourceNodeType>);
 
 #[derive(Resource, Default)]
 pub struct MachineLUT(pub HashMap<TilePos, Entity>);
+
+/// Marker trait for machines which transport from one tile to the next
+#[derive(Component)]
+pub struct Transporter;
+
+/// Sprites which are cycled through depending on the progress of the machine
+#[derive(Component)]
+pub struct AnimationSprites(pub Vec<EntitySprite>);

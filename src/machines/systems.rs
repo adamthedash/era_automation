@@ -7,7 +7,7 @@ use crate::{
     map::{TilePos, WorldPos},
     player::Player,
     resources::{ResourceAmount, ResourceMarker, ResourceNodeLUT, ResourceNodeType},
-    sprites::{GetSprite, ResourceSprite, SpriteSheets},
+    sprites::{EntitySprite, GetSprite, SpriteSheets},
 };
 
 use super::components::*;
@@ -107,10 +107,44 @@ pub fn spawn_harvester(
                 hs.insert(ResourceNodeType::Bush);
                 hs
             }),
+            AnimationSprites(vec![EntitySprite::Harvester1, EntitySprite::Harvester2]),
         ))
         .id();
 
-    ResourceSprite::House.spawn_sprite(&mut commands, &sprite_sheets, Some(machine));
+    EntitySprite::Harvester1.spawn_sprite(&mut commands, &sprite_sheets, Some(machine));
 
     machines.0.insert(tile_pos, machine);
+}
+
+/// Cycle through the sprites as the machine makes progress
+pub fn animate_machine(
+    machines: Query<
+        (
+            Entity,
+            &HarvestState,
+            &HarvestSpeed,
+            &Children,
+            &AnimationSprites,
+        ),
+        With<Harvester>,
+    >,
+    sprite_entities: Query<(), With<Sprite>>,
+    mut commands: Commands,
+    sprite_sheets: Res<SpriteSheets>,
+) {
+    for (machine, state, speed, children, sprites) in machines {
+        let sprite_index = (state.0 / (speed.0 / sprites.0.len() as f32)) as usize;
+
+        // Delete old sprite
+        // TODO: Only advance sprite when it changes
+        let sprite = children
+            .iter()
+            .find(|child| sprite_entities.get(*child).is_ok())
+            .expect("Machine has no sprite child");
+
+        commands.entity(sprite).despawn();
+
+        // Add new sprite
+        sprites.0[sprite_index].spawn_sprite(&mut commands, &sprite_sheets, Some(machine));
+    }
 }

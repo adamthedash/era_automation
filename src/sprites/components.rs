@@ -28,6 +28,9 @@ pub enum ResourceSprite {
 #[repr(usize)]
 pub enum EntitySprite {
     Player,
+    Harvester1,
+    Harvester2,
+    Transporter,
 }
 
 /// Indexes into item_sheet.png

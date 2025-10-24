@@ -6,7 +6,7 @@ pub const PLAYER_SPEED: f32 = 15.;
 /// Size tiles are stored in the sprite sheet
 pub const TILE_RAW_SIZE: UVec2 = UVec2::splat(16);
 // How many pixels per world unit
-pub const CAMERA_ZOOM: f32 = 32.;
+pub const CAMERA_ZOOM: f32 = 64.;
 
 /// Number of tiles per chunk
 pub const CHUNK_SIZE: UVec2 = UVec2::splat(16);
