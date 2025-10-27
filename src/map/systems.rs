@@ -94,7 +94,7 @@ pub fn update_gradient_map(
     // Trigger gradient recalc for this and adjacent chunks
     for i in -1..=1 {
         for j in -1..=1 {
-            let chunk_pos = ChunkPos(chunk_pos.0 + IVec2::new(i, j));
+            let chunk_pos = chunk_pos + IVec2::new(i, j);
 
             if chunk_lut.0.contains_key(&chunk_pos) {
                 writer.write(RecomputeGradient(chunk_pos));
@@ -137,7 +137,7 @@ pub fn recompute_gradients(
         let mut padded_height_map = PaddedHeightGrid([[None; 3]; 3]);
         for i in 0..3 {
             for j in 0..3 {
-                let chunk_pos = ChunkPos(chunk_pos.0 + IVec2::new(j - 1, i - 1));
+                let chunk_pos = chunk_pos + IVec2::new(j - 1, i - 1);
                 if let Some(entity) = chunk_lut.0.get(&chunk_pos) {
                     let (_, height_data) = chunk_data
                         .get(*entity)

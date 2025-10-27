@@ -1,15 +1,12 @@
 use std::f32::consts::FRAC_PI_2;
 
 use crate::{
-    map::{ChunkPos, GradientData, TilePos},
+    map::{ChunkPos, GradientData},
     sprites::{GetSprite, ResourceSprite, SpriteSheets},
 };
 
 use super::components::*;
-use bevy::{
-    math::{USizeVec2, ops::atan2},
-    prelude::*,
-};
+use bevy::{math::ops::atan2, prelude::*};
 
 pub fn toggle_gradient_arrows(mut enabled: ResMut<GradientArrowsEnabled>) {
     enabled.0 ^= true;
@@ -37,7 +34,7 @@ pub fn spawn_gradient_arrows(
         let chunk_pos = chunk_pos.as_tile_pos();
         for (yo, row) in gradients.0.iter().enumerate() {
             for (xo, grad) in row.iter().enumerate() {
-                let tile_pos = TilePos(chunk_pos.0 + USizeVec2::new(xo, yo).as_ivec2());
+                let tile_pos = chunk_pos + IVec2::new(xo as i32, yo as i32);
                 if !arrows_lut.0.contains_key(&tile_pos) {
                     let transform = tile_pos
                         .as_transform(10.)
@@ -66,10 +63,10 @@ pub fn update_gradient_arrows(
 ) {
     for (chunk_pos, gradients) in chunks {
         info!("Updating gradient arrows for chunk: {:?}", chunk_pos.0);
-        let chunk_pos = chunk_pos.as_tile_pos();
+        let chunk_tile_pos = chunk_pos.as_tile_pos();
         for (yo, row) in gradients.0.iter().enumerate() {
             for (xo, grad) in row.iter().enumerate() {
-                let tile_pos = TilePos(chunk_pos.0 + USizeVec2::new(xo, yo).as_ivec2());
+                let tile_pos = chunk_tile_pos + IVec2::new(xo as i32, yo as i32);
 
                 let entity = arrows_lut
                     .0

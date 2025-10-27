@@ -33,7 +33,7 @@ pub fn tick_harvesters(
 ) {
     for (tile_pos, mut state, speed, direction, harvestable_nodes) in machines {
         // Check if there's a harvestable node in front of the machine
-        let resource_pos = TilePos(tile_pos.0 + direction.0);
+        let resource_pos = tile_pos + direction.0;
 
         let Some(resource) = resource_lut.0.get(&resource_pos) else {
             // No resource, so reset progress
@@ -56,7 +56,7 @@ pub fn tick_harvesters(
         if state.0 >= speed.0 {
             state.0 -= speed.0;
 
-            let behind = TilePos(tile_pos.0 - direction.0);
+            let behind = tile_pos - direction.0;
 
             // Spawn an item
             let item = commands
@@ -101,7 +101,7 @@ pub fn place_machine(
     resources: Res<ResourceNodeLUT>,
     mut commands: Commands,
 ) {
-    let tile_pos = player.0.tile();
+    let tile_pos = (player.0 + Vec2::splat(0.5)).tile();
 
     if machines.0.contains_key(&tile_pos) {
         // Machine already here
@@ -173,7 +173,7 @@ pub fn tick_transporters(
             // Check if the item has gone off the end
             if progress >= 1. {
                 // Check if there's another transporter next to it
-                let adjacent_pos = TilePos(machine_pos.0 + direction.0);
+                let adjacent_pos = machine_pos + direction.0;
                 if let Some(adjacent_machine) = machine_lut.0.get(&adjacent_pos) {
                     // Put item in the machine next to it
                     if let Ok((_, direction, _, _)) = transporters.get(*adjacent_machine) {

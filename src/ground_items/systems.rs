@@ -32,8 +32,7 @@ pub fn animate_items(
             / 2.;
 
         // Update transform
-        let offset_transform =
-            WorldPos(world_pos.0 + Vec2::Y * offset).as_transform(transform.translation.z);
+        let offset_transform = (world_pos + Vec2::Y * offset).as_transform(transform.translation.z);
         transform.translation = offset_transform.translation;
     }
 }

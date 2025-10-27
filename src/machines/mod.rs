@@ -15,7 +15,7 @@ impl Plugin for MachinePlugin {
             .add_systems(
                 Update,
                 (
-                    place_machine.run_if(key_just_pressed(KeyCode::KeyB)),
+                    place_machine.run_if(key_just_pressed(KeyCode::KeyP)),
                     animate_machine,
                 ),
             );

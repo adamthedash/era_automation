@@ -7,7 +7,7 @@ use era_automation::{
     ground_items::GroundItemPlugin,
     knowledge::KnowledgePlugin,
     machines::MachinePlugin,
-    map::{ChunkLUT, ChunkPos, CreateChunk, MapPlugin, WorldPos},
+    map::{ChunkLUT, CreateChunk, MapPlugin, WorldPos},
     notification::NotificationPlugin,
     player::{Player, PlayerPlugin},
     resources::ResourcePlugin,
@@ -44,7 +44,7 @@ fn spawn_chunks(
 
     for x in -CHUNK_LOAD_RADIUS..=CHUNK_LOAD_RADIUS {
         for y in -CHUNK_LOAD_RADIUS..=CHUNK_LOAD_RADIUS {
-            let chunk_pos = ChunkPos(IVec2::new(player_chunk.0.x + x, player_chunk.0.y + y));
+            let chunk_pos = player_chunk + IVec2::new(x, y);
             if !chunk_lut.0.contains_key(&chunk_pos) {
                 messages.write(CreateChunk(chunk_pos));
             }

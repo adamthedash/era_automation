@@ -5,6 +5,7 @@ edition = "2024"
 default-run = "game"
 
 [dependencies]
+auto_ops = "0.3.0"
 bevy = {version = "0.17.2", features = ["dynamic_linking"]}
 bevy_egui = "0.38.0"
 # Dyn- compatible version

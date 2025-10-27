@@ -8,7 +8,7 @@ use crate::{
         RESOURCE_STARTING_RADIUS, Z_RESOURCES,
     },
     items::ItemType,
-    map::{ChunkCreated, ChunkPos, TerrainData, TilePos},
+    map::{ChunkCreated, ChunkPos, TerrainData},
     player::Targettable,
     sprites::{GetSprite, SpriteSheets, TerrainSprite},
     utils,
@@ -39,7 +39,7 @@ pub fn spawn_resources(
     for y in 0..CHUNK_SIZE.y {
         for x in 0..CHUNK_SIZE.x {
             if random_bool(total_weight) {
-                let tile_pos = TilePos(chunk_tile_pos.0 + IVec2::new(x as i32, y as i32));
+                let tile_pos = chunk_tile_pos + IVec2::new(x as i32, y as i32);
                 if tile_pos.0.length_squared() <= RESOURCE_STARTING_RADIUS.pow(2) {
                     // Resources can't spawn too close to the starting point
                     continue;

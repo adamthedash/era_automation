@@ -1,3 +1,4 @@
+use auto_ops::impl_op_ex;
 use bevy::{platform::collections::HashMap, prelude::*};
 
 use crate::{
@@ -27,6 +28,9 @@ impl TilePos {
     }
 }
 
+impl_op_ex!(+ |a: &TilePos, b: &IVec2| -> TilePos { TilePos(a.0 + b) });
+impl_op_ex!(-|a: &TilePos, b: &IVec2| -> TilePos { TilePos(a.0 - b) });
+
 /// Discrete chunk locations - Chunk space
 #[derive(Component, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct ChunkPos(pub IVec2);
@@ -35,6 +39,9 @@ impl ChunkPos {
         TilePos(self.0 * CHUNK_SIZE.as_ivec2())
     }
 }
+
+impl_op_ex!(+ |a: &ChunkPos, b: &IVec2| -> ChunkPos { ChunkPos(a.0 + b) });
+impl_op_ex!(-|a: &ChunkPos, b: &IVec2| -> ChunkPos { ChunkPos(a.0 - b) });
 
 /// Continuous locations - World space
 #[derive(Component, Clone, Copy)]
@@ -52,6 +59,9 @@ impl WorldPos {
         TilePos(self.0.floor().as_ivec2())
     }
 }
+
+impl_op_ex!(+ |a: &WorldPos, b: &Vec2| -> WorldPos { WorldPos(a.0 + b) });
+impl_op_ex!(-|a: &WorldPos, b: &Vec2| -> WorldPos { WorldPos(a.0 - b) });
 
 /// Game data friendly storage for terrain tiles
 #[derive(Component, Default)]
