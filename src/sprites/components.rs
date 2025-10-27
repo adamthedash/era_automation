@@ -41,6 +41,8 @@ pub enum ItemSprite {
     Log,
     Water,
     Bowl,
+    Harvester,
+    Transporter,
 }
 
 /// Holds a spritesheet image & layout info

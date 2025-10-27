@@ -28,6 +28,40 @@ pub fn init_knowledge(mut commands: Commands) {
         },
     ));
     commands.spawn((
+        UnlockName("Harvester".to_string()),
+        UnlockRequirements(vec![
+            UnlockRequirement::TotalDeposited {
+                resource: ResourceType::Wood,
+                amount: 0,
+            },
+            UnlockRequirement::TotalDeposited {
+                resource: ResourceType::Water,
+                amount: 0,
+            },
+        ]),
+        Recipe {
+            reqs: vec![(ResourceType::Wood, 5)],
+            product: ItemType::Harvester,
+        },
+    ));
+    commands.spawn((
+        UnlockName("Transported".to_string()),
+        UnlockRequirements(vec![
+            UnlockRequirement::TotalDeposited {
+                resource: ResourceType::Wood,
+                amount: 0,
+            },
+            UnlockRequirement::TotalDeposited {
+                resource: ResourceType::Water,
+                amount: 0,
+            },
+        ]),
+        Recipe {
+            reqs: vec![(ResourceType::Wood, 5)],
+            product: ItemType::Transporter,
+        },
+    ));
+    commands.spawn((
         UnlockName("Plant Watering".to_string()),
         UnlockRequirements(vec![
             UnlockRequirement::TotalDeposited {

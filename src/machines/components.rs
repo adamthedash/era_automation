@@ -24,7 +24,6 @@ pub struct Direction(pub IVec2);
 
 /// How often an item is harvested, in seconds
 #[derive(Component)]
-#[require(HarvestState)]
 pub struct HarvestSpeed(pub f32);
 
 /// How long along a harvest the machine currently is
@@ -58,23 +57,22 @@ pub struct TransportSpeed(pub f32);
 #[derive(Component)]
 pub struct AnimationSprites(pub Vec<EntitySprite>);
 
+/// Marker for machines placed in the world
+#[derive(Component)]
+pub struct Placed;
+
+/// For harvester machines
 #[derive(Bundle)]
 pub struct HarvesterBundle {
     machine_marker: Machine,
-    output_direction: Direction,
-    tile_pos: TilePos,
-    transform: Transform,
     animation_sprites: AnimationSprites,
     // Harvester-specific
     harvester_marker: Harvester,
     harvestable_nodes: HarvestableNodes,
     speed: HarvestSpeed,
-    state: HarvestState,
 }
 impl HarvesterBundle {
     pub fn new(
-        tile_pos: TilePos,
-        output_direction: IVec2,
         speed: f32,
         harvestable_nodes: impl IntoIterator<Item = ResourceNodeType>,
         sprites: Vec<EntitySprite>,
@@ -83,46 +81,67 @@ impl HarvesterBundle {
             machine_marker: Machine,
             harvester_marker: Harvester,
             harvestable_nodes: HarvestableNodes(HashSet::from_iter(harvestable_nodes)),
-            state: HarvestState(0.),
             speed: HarvestSpeed(speed),
-            output_direction: Direction(output_direction),
-            transform: tile_pos.as_transform(Z_RESOURCES),
-            tile_pos,
             animation_sprites: AnimationSprites(sprites),
         }
     }
 }
 
 #[derive(Bundle)]
-pub struct TransporterBundle {
-    machine_marker: Machine,
-    output_direction: Direction,
+pub struct PlacedHarvesterBundle {
     tile_pos: TilePos,
     transform: Transform,
+    state: HarvestState,
+    output_direction: Direction,
+}
+impl PlacedHarvesterBundle {
+    pub fn new(tile_pos: TilePos, output_direction: IVec2) -> Self {
+        Self {
+            transform: tile_pos.as_transform(Z_RESOURCES),
+            tile_pos,
+            output_direction: Direction(output_direction),
+            state: HarvestState(0.),
+        }
+    }
+}
+
+/// For conveyor belts
+#[derive(Bundle)]
+pub struct TransporterBundle {
+    machine_marker: Machine,
     animation_sprites: AnimationSprites,
     // Transporter-specific
     transporter_marker: Transporter,
     speed: TransportSpeed,
 }
 impl TransporterBundle {
-    pub fn new(
-        tile_pos: TilePos,
-        direction: IVec2,
-        speed: f32,
-        sprites: Vec<EntitySprite>,
-    ) -> Self {
+    pub fn new(speed: f32, sprites: Vec<EntitySprite>) -> Self {
         Self {
             machine_marker: Machine,
             transporter_marker: Transporter,
-            output_direction: Direction(direction),
             speed: TransportSpeed(speed),
-            transform: tile_pos.as_transform(Z_RESOURCES),
-            tile_pos,
             animation_sprites: AnimationSprites(sprites),
         }
     }
 }
 
+#[derive(Bundle)]
+pub struct PlacedTransporterBundle {
+    output_direction: Direction,
+    tile_pos: TilePos,
+    transform: Transform,
+}
+impl PlacedTransporterBundle {
+    pub fn new(tile_pos: TilePos, direction: IVec2) -> Self {
+        Self {
+            output_direction: Direction(direction),
+            transform: tile_pos.as_transform(Z_RESOURCES),
+            tile_pos,
+        }
+    }
+}
+
+/// For items on conveyor belts
 #[derive(Bundle)]
 pub struct TransportedItemBundle {
     transporter: ChildOf,

@@ -4,9 +4,9 @@ use crate::{
     ground_items::GroundItemBundle,
     items::ItemType,
     map::{TilePos, WorldPos},
-    player::Player,
+    player::{HeldBy, HeldItemBundle, Holding, Player},
     resources::{ResourceAmount, ResourceMarker, ResourceNodeLUT, ResourceNodeType},
-    sprites::{EntitySprite, GetSprite, SpriteSheets},
+    sprites::{GetSprite, SpriteSheets},
 };
 
 use super::components::*;
@@ -94,14 +94,14 @@ pub fn tick_harvesters(
 }
 
 /// Place a harvester at the player's feet
-pub fn spawn_harvester(
-    player: Single<&WorldPos, With<Player>>,
+pub fn place_harvester(
+    player: Single<(&WorldPos, &Holding), With<Player>>,
+    held_harvesters: Query<(), (With<Harvester>, With<HeldBy>)>,
     mut machines: ResMut<MachineLUT>,
     resources: Res<ResourceNodeLUT>,
     mut commands: Commands,
-    sprite_sheets: Res<SpriteSheets>,
 ) {
-    let tile_pos = player.tile();
+    let tile_pos = player.0.tile();
 
     if machines.0.contains_key(&tile_pos) {
         // Machine already here
@@ -112,31 +112,36 @@ pub fn spawn_harvester(
         return;
     }
 
-    // Spawn the machine
-    let machine = commands
-        .spawn(HarvesterBundle::new(
-            tile_pos,
-            -IVec2::X,
-            2.,
-            [ResourceNodeType::Bush],
-            vec![EntitySprite::Harvester1, EntitySprite::Harvester2],
-        ))
-        .id();
+    let machine = player
+        .1
+        .iter()
+        .find(|entity| held_harvesters.contains(*entity));
 
-    EntitySprite::Harvester1.spawn_sprite(&mut commands, &sprite_sheets, Some(machine));
+    let Some(machine) = machine else {
+        // Player isn't holding a harvester
+        return;
+    };
+
+    // Place the machine
+    commands
+        .entity(machine)
+        // Remove heldby stuff
+        .remove::<HeldItemBundle>()
+        // Add placed transporter stuff
+        .insert(PlacedHarvesterBundle::new(tile_pos, -IVec2::X));
 
     machines.0.insert(tile_pos, machine);
 }
 
 /// Place a transporter at the player's feet
-pub fn spawn_transporter(
-    player: Single<&WorldPos, With<Player>>,
+pub fn place_transporter(
+    player: Single<(&WorldPos, &Holding), With<Player>>,
+    held_transporters: Query<(), (With<Transporter>, With<HeldBy>)>,
     mut machines: ResMut<MachineLUT>,
     resources: Res<ResourceNodeLUT>,
     mut commands: Commands,
-    sprite_sheets: Res<SpriteSheets>,
 ) {
-    let tile_pos = player.tile();
+    let tile_pos = player.0.tile();
 
     if machines.0.contains_key(&tile_pos) {
         // Machine already here
@@ -147,17 +152,23 @@ pub fn spawn_transporter(
         return;
     }
 
-    // Spawn the machine
-    let machine = commands
-        .spawn((TransporterBundle::new(
-            tile_pos,
-            IVec2::X,
-            2.,
-            vec![EntitySprite::Transporter],
-        ),))
-        .id();
+    // Place the machine
+    let machine = player
+        .1
+        .iter()
+        .find(|entity| held_transporters.contains(*entity));
 
-    EntitySprite::Transporter.spawn_sprite(&mut commands, &sprite_sheets, Some(machine));
+    let Some(machine) = machine else {
+        // Player isn't holding a transporter
+        return;
+    };
+
+    commands
+        .entity(machine)
+        // Remove heldby stuff
+        .remove::<HeldItemBundle>()
+        // Add placed transporter stuff
+        .insert(PlacedTransporterBundle::new(tile_pos, IVec2::X));
 
     machines.0.insert(tile_pos, machine);
 }

@@ -15,8 +15,8 @@ impl Plugin for MachinePlugin {
             .add_systems(
                 Update,
                 (
-                    spawn_harvester.run_if(key_just_pressed(KeyCode::KeyM)),
-                    spawn_transporter.run_if(key_just_pressed(KeyCode::KeyT)),
+                    place_harvester.run_if(key_just_pressed(KeyCode::KeyM)),
+                    place_transporter.run_if(key_just_pressed(KeyCode::KeyT)),
                     animate_machine,
                 ),
             );

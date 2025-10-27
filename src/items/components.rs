@@ -2,51 +2,73 @@ use bevy::{platform::collections::HashSet, prelude::*};
 
 use crate::{
     container::{ContainableItems, Container},
-    resources::ResourceType,
-    sprites::{GetSprite, ItemSprite, SpriteSheets},
+    machines::{HarvesterBundle, TransporterBundle},
+    resources::{ResourceNodeType, ResourceType},
+    sprites::{EntitySprite, GetSprite, ItemSprite, SpriteSheets},
 };
 
-/// The type of resource used by the village
+/// Items that can be held / moved around
 #[derive(Component, Clone, Copy, Hash, PartialEq, Eq, Debug)]
 pub enum ItemType {
     Berry,
     Log,
     Water,
     Bowl,
+    Harvester,
+    Transporter,
 }
 
 impl ItemType {
     pub fn sprite_type(&self) -> ItemSprite {
+        use ItemType::*;
         match self {
-            ItemType::Berry => ItemSprite::Berry,
-            ItemType::Log => ItemSprite::Log,
-            ItemType::Water => ItemSprite::Water,
-            ItemType::Bowl => ItemSprite::Bowl,
+            Berry => ItemSprite::Berry,
+            Log => ItemSprite::Log,
+            Water => ItemSprite::Water,
+            Bowl => ItemSprite::Bowl,
+            Harvester => ItemSprite::Harvester,
+            Transporter => ItemSprite::Transporter,
         }
     }
 
     /// Type of resource this item contributes to, if any
     pub fn resource_type(&self) -> Option<ResourceType> {
+        use ItemType::*;
         match self {
-            ItemType::Berry => Some(ResourceType::Food),
-            ItemType::Log => Some(ResourceType::Wood),
-            ItemType::Water => Some(ResourceType::Water),
-            ItemType::Bowl => None,
+            Berry => Some(ResourceType::Food),
+            Log => Some(ResourceType::Wood),
+            Water => Some(ResourceType::Water),
+            Bowl => None,
+            Harvester => None,
+            Transporter => None,
         }
     }
 
     /// Adds extra item-specific components to an entity
     pub fn add_extra_components(&self, commands: &mut EntityCommands) {
         use ItemType::*;
-        if self == &Bowl {
-            commands.insert((
-                Container,
-                ContainableItems({
-                    let mut set = HashSet::new();
-                    set.insert(Water);
-                    set
-                }),
-            ));
+        match self {
+            Bowl => {
+                commands.insert((
+                    Container,
+                    ContainableItems({
+                        let mut set = HashSet::new();
+                        set.insert(Water);
+                        set
+                    }),
+                ));
+            }
+            Harvester => {
+                commands.insert(HarvesterBundle::new(
+                    2.,
+                    [ResourceNodeType::Bush],
+                    vec![EntitySprite::Harvester1, EntitySprite::Harvester2],
+                ));
+            }
+            Transporter => {
+                commands.insert(TransporterBundle::new(2., vec![EntitySprite::Transporter]));
+            }
+            _ => (),
         }
     }
 }
