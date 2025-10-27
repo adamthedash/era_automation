@@ -16,6 +16,7 @@ impl Plugin for MachinePlugin {
                 Update,
                 (
                     place_machine.run_if(key_just_pressed(KeyCode::KeyP)),
+                    rotate_machine.run_if(key_just_pressed(KeyCode::KeyR)),
                     animate_machine,
                 ),
             );

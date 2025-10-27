@@ -6,6 +6,7 @@ use bevy::{
 use crate::{
     consts::{Z_RESOURCES, Z_TRANSPORTED_ITEM},
     map::TilePos,
+    player::Targettable,
     resources::ResourceNodeType,
     sprites::EntitySprite,
 };
@@ -96,6 +97,8 @@ pub struct PlacedHarvesterBundle {
     transform: Transform,
     state: HarvestState,
     output_direction: Direction,
+    placed: Placed,
+    targettable: Targettable,
 }
 impl PlacedHarvesterBundle {
     pub fn new(tile_pos: TilePos, output_direction: IVec2) -> Self {
@@ -104,6 +107,8 @@ impl PlacedHarvesterBundle {
             tile_pos,
             output_direction: Direction(output_direction),
             state: HarvestState(0.),
+            placed: Placed,
+            targettable: Targettable,
         }
     }
 }
@@ -133,6 +138,8 @@ pub struct PlacedTransporterBundle {
     output_direction: Direction,
     tile_pos: TilePos,
     transform: Transform,
+    placed: Placed,
+    targettable: Targettable,
 }
 impl PlacedTransporterBundle {
     pub fn new(tile_pos: TilePos, direction: IVec2) -> Self {
@@ -140,6 +147,8 @@ impl PlacedTransporterBundle {
             output_direction: Direction(direction),
             transform: tile_pos.as_transform(Z_RESOURCES),
             tile_pos,
+            targettable: Targettable,
+            placed: Placed,
         }
     }
 }

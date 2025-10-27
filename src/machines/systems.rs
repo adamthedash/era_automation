@@ -1,10 +1,12 @@
+use std::f32::consts::FRAC_PI_2;
+
 use bevy::prelude::*;
 
 use crate::{
     ground_items::GroundItemBundle,
     items::ItemType,
     map::{TilePos, WorldPos},
-    player::{HeldBy, HeldItemBundle, Holding, Player},
+    player::{HeldBy, HeldItemBundle, Holding, Player, Targetted},
     resources::{ResourceAmount, ResourceMarker, ResourceNodeLUT, ResourceNodeType},
     sprites::{GetSprite, SpriteSheets},
 };
@@ -166,9 +168,8 @@ pub fn tick_transporters(
             state.0 += timer.delta_secs();
             let progress = state.0 / speed.0;
 
-            let offset = progress - 0.5;
-            transform.translation =
-                (direction.0.as_vec2() * offset).extend(transform.translation.z);
+            // Items always travel along +X, as rotation is handled by machine-level transform
+            transform.translation = Vec3::new(progress - 0.5, 0., transform.translation.z);
 
             // Check if the item has gone off the end
             if progress >= 1. {
@@ -229,4 +230,20 @@ pub fn animate_machine(
         // Add new sprite
         sprites.0[sprite_index].spawn_sprite(&mut commands, &sprite_sheets, Some(machine));
     }
+}
+
+/// Rotate a machine clockwise
+pub fn rotate_machine(
+    mut targetted_machine: Single<
+        (&mut Direction, &mut Transform),
+        (With<Placed>, With<Machine>, With<Targetted>),
+    >,
+) {
+    info!("Rotating machine");
+
+    // 90 degree turn clockwise
+    let right_turn = IVec2::new(0, -1);
+
+    targetted_machine.0.0 = right_turn.rotate(targetted_machine.0.0);
+    targetted_machine.1.rotate_z(-FRAC_PI_2);
 }
