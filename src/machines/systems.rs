@@ -93,10 +93,10 @@ pub fn tick_harvesters(
     }
 }
 
-/// Place a harvester at the player's feet
-pub fn place_harvester(
+/// Place a machine at the player's feet
+pub fn place_machine(
     player: Single<(&WorldPos, &Holding), With<Player>>,
-    held_harvesters: Query<(), (With<Harvester>, With<HeldBy>)>,
+    held_machines: Query<(Entity, &Machine), With<HeldBy>>,
     mut machines: ResMut<MachineLUT>,
     resources: Res<ResourceNodeLUT>,
     mut commands: Commands,
@@ -112,65 +112,36 @@ pub fn place_harvester(
         return;
     }
 
-    let machine = player
+    let Some((machine, machine_type)) = player
         .1
         .iter()
-        .find(|entity| held_harvesters.contains(*entity));
-
-    let Some(machine) = machine else {
-        // Player isn't holding a harvester
+        .find_map(|entity| held_machines.get(entity).ok())
+    else {
+        // Player isn't holding a machine
         return;
     };
+
+    machines.0.insert(tile_pos, machine);
 
     // Place the machine
     commands
         .entity(machine)
         // Remove heldby stuff
-        .remove::<HeldItemBundle>()
-        // Add placed transporter stuff
-        .insert(PlacedHarvesterBundle::new(tile_pos, -IVec2::X));
+        .remove::<HeldItemBundle>();
 
-    machines.0.insert(tile_pos, machine);
-}
-
-/// Place a transporter at the player's feet
-pub fn place_transporter(
-    player: Single<(&WorldPos, &Holding), With<Player>>,
-    held_transporters: Query<(), (With<Transporter>, With<HeldBy>)>,
-    mut machines: ResMut<MachineLUT>,
-    resources: Res<ResourceNodeLUT>,
-    mut commands: Commands,
-) {
-    let tile_pos = player.0.tile();
-
-    if machines.0.contains_key(&tile_pos) {
-        // Machine already here
-        return;
+    // Add placed machine stuff
+    match machine_type {
+        Machine::Harvester => {
+            commands
+                .entity(machine)
+                .insert(PlacedHarvesterBundle::new(tile_pos, -IVec2::X));
+        }
+        Machine::Transporter => {
+            commands
+                .entity(machine)
+                .insert(PlacedTransporterBundle::new(tile_pos, IVec2::X));
+        }
     }
-    if resources.0.contains_key(&tile_pos) {
-        // Resource already here
-        return;
-    }
-
-    // Place the machine
-    let machine = player
-        .1
-        .iter()
-        .find(|entity| held_transporters.contains(*entity));
-
-    let Some(machine) = machine else {
-        // Player isn't holding a transporter
-        return;
-    };
-
-    commands
-        .entity(machine)
-        // Remove heldby stuff
-        .remove::<HeldItemBundle>()
-        // Add placed transporter stuff
-        .insert(PlacedTransporterBundle::new(tile_pos, IVec2::X));
-
-    machines.0.insert(tile_pos, machine);
 }
 
 /// Move items along the transporter

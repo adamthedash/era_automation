@@ -12,7 +12,10 @@ use crate::{
 
 /// Marker for machines
 #[derive(Component)]
-pub struct Machine;
+pub enum Machine {
+    Harvester,
+    Transporter,
+}
 
 /// Marker for harvesting machines
 #[derive(Component)]
@@ -78,7 +81,7 @@ impl HarvesterBundle {
         sprites: Vec<EntitySprite>,
     ) -> Self {
         Self {
-            machine_marker: Machine,
+            machine_marker: Machine::Harvester,
             harvester_marker: Harvester,
             harvestable_nodes: HarvestableNodes(HashSet::from_iter(harvestable_nodes)),
             speed: HarvestSpeed(speed),
@@ -117,7 +120,7 @@ pub struct TransporterBundle {
 impl TransporterBundle {
     pub fn new(speed: f32, sprites: Vec<EntitySprite>) -> Self {
         Self {
-            machine_marker: Machine,
+            machine_marker: Machine::Transporter,
             transporter_marker: Transporter,
             speed: TransportSpeed(speed),
             animation_sprites: AnimationSprites(sprites),
