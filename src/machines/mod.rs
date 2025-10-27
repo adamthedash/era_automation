@@ -11,11 +11,12 @@ pub struct MachinePlugin;
 impl Plugin for MachinePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<MachineLUT>()
-            .add_systems(FixedUpdate, tick_harvesters)
+            .add_systems(FixedUpdate, (tick_harvesters, tick_transporters))
             .add_systems(
                 Update,
                 (
                     spawn_harvester.run_if(key_just_pressed(KeyCode::KeyM)),
+                    spawn_transporter.run_if(key_just_pressed(KeyCode::KeyT)),
                     animate_machine,
                 ),
             );

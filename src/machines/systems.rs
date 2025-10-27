@@ -1,7 +1,6 @@
-use bevy::{platform::collections::HashSet, prelude::*};
+use bevy::prelude::*;
 
 use crate::{
-    consts::Z_RESOURCES,
     ground_items::GroundItemBundle,
     items::ItemType,
     map::{TilePos, WorldPos},
@@ -26,6 +25,8 @@ pub fn tick_harvesters(
     >,
     resource_lut: Res<ResourceNodeLUT>,
     resources: Query<(&ResourceNodeType, &ItemType), With<ResourceMarker>>,
+    machine_lut: Res<MachineLUT>,
+    transporters: Query<(), With<Transporter>>,
     timer: Res<Time>,
     mut commands: Commands,
     sprite_sheets: Res<SpriteSheets>,
@@ -57,17 +58,37 @@ pub fn tick_harvesters(
 
             let behind = TilePos(tile_pos.0 - direction.0);
 
-            // Spawn an item on the ground
-            let entity = commands
+            // Spawn an item
+            let item = commands
                 .spawn((
-                    GroundItemBundle::new(&behind.as_world_pos()),
                     // Game data
                     *item_type,
                     ResourceAmount(1),
                 ))
                 .id();
+            item_type.spawn_sprite(&mut commands, &sprite_sheets, Some(item));
 
-            item_type.spawn_sprite(&mut commands, &sprite_sheets, Some(entity));
+            // Check if there's something beside it
+            if let Some(adjacent_machine) = machine_lut.0.get(&behind) {
+                // Put item in the machine next to it
+                // TODO: Some abstraction over "machine that can accept items"
+                if transporters.contains(*adjacent_machine) {
+                    info!("Transferring item Harvester -> transporter");
+                    // Another transporter
+                    commands
+                        .entity(item)
+                        .insert(TransportedItemBundle::new(*adjacent_machine, direction));
+                } else {
+                    // Different type of machine
+                    todo!()
+                }
+            } else {
+                info!("Transferring item Harvester -> ground");
+                // Drop item on ground
+                commands
+                    .entity(item)
+                    .insert(GroundItemBundle::new(&behind.as_world_pos()));
+            }
         }
     }
 }
@@ -93,27 +114,106 @@ pub fn spawn_harvester(
 
     // Spawn the machine
     let machine = commands
-        .spawn((
+        .spawn(HarvesterBundle::new(
             tile_pos,
-            tile_pos.as_transform(Z_RESOURCES),
-            // TODO: Harvester bundle
-            Machine,
-            Harvester,
-            Direction(-IVec2::X),
-            HarvestSpeed(2.),
-            HarvestState(0.),
-            HarvestableNodes({
-                let mut hs = HashSet::new();
-                hs.insert(ResourceNodeType::Bush);
-                hs
-            }),
-            AnimationSprites(vec![EntitySprite::Harvester1, EntitySprite::Harvester2]),
+            -IVec2::X,
+            2.,
+            [ResourceNodeType::Bush],
+            vec![EntitySprite::Harvester1, EntitySprite::Harvester2],
         ))
         .id();
 
     EntitySprite::Harvester1.spawn_sprite(&mut commands, &sprite_sheets, Some(machine));
 
     machines.0.insert(tile_pos, machine);
+}
+
+/// Place a transporter at the player's feet
+pub fn spawn_transporter(
+    player: Single<&WorldPos, With<Player>>,
+    mut machines: ResMut<MachineLUT>,
+    resources: Res<ResourceNodeLUT>,
+    mut commands: Commands,
+    sprite_sheets: Res<SpriteSheets>,
+) {
+    let tile_pos = player.tile();
+
+    if machines.0.contains_key(&tile_pos) {
+        // Machine already here
+        return;
+    }
+    if resources.0.contains_key(&tile_pos) {
+        // Resource already here
+        return;
+    }
+
+    // Spawn the machine
+    let machine = commands
+        .spawn((TransporterBundle::new(
+            tile_pos,
+            IVec2::X,
+            2.,
+            vec![EntitySprite::Transporter],
+        ),))
+        .id();
+
+    EntitySprite::Transporter.spawn_sprite(&mut commands, &sprite_sheets, Some(machine));
+
+    machines.0.insert(tile_pos, machine);
+}
+
+/// Move items along the transporter
+pub fn tick_transporters(
+    mut transported_items: Query<
+        (Entity, &mut Transform, &mut TransportState),
+        With<TransportedItem>,
+    >,
+    transporters: Query<(&TransportSpeed, &Direction, &Children, &TilePos), With<Transporter>>,
+    machine_lut: Res<MachineLUT>,
+    timer: Res<Time>,
+    mut commands: Commands,
+) {
+    for (speed, direction, children, machine_pos) in transporters {
+        for child in children {
+            let Ok((item, mut transform, mut state)) = transported_items.get_mut(*child) else {
+                // Non-item child
+                continue;
+            };
+
+            // Move item along the current transporter
+            state.0 += timer.delta_secs();
+            let progress = state.0 / speed.0;
+
+            let offset = progress - 0.5;
+            transform.translation =
+                (direction.0.as_vec2() * offset).extend(transform.translation.z);
+
+            // Check if the item has gone off the end
+            if progress >= 1. {
+                // Check if there's another transporter next to it
+                let adjacent_pos = TilePos(machine_pos.0 + direction.0);
+                if let Some(adjacent_machine) = machine_lut.0.get(&adjacent_pos) {
+                    // Put item in the machine next to it
+                    if let Ok((_, direction, _, _)) = transporters.get(*adjacent_machine) {
+                        // Another transporter
+                        commands
+                            .entity(item)
+                            .insert(TransportedItemBundle::new(*adjacent_machine, direction));
+                    } else {
+                        // Different type of machine
+                        todo!()
+                    }
+                } else {
+                    // Drop item on ground
+                    commands.entity(item).remove::<TransportedItemBundle>();
+
+                    commands
+                        .entity(item)
+                        .insert(GroundItemBundle::new(&adjacent_pos.as_world_pos()));
+                }
+            }
+        }
+    }
 }
 
 /// Cycle through the sprites as the machine makes progress

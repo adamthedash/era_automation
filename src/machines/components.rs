@@ -3,7 +3,12 @@ use bevy::{
     prelude::*,
 };
 
-use crate::{map::TilePos, resources::ResourceNodeType, sprites::EntitySprite};
+use crate::{
+    consts::{Z_RESOURCES, Z_TRANSPORTED_ITEM},
+    map::TilePos,
+    resources::ResourceNodeType,
+    sprites::EntitySprite,
+};
 
 /// Marker for machines
 #[derive(Component)]
@@ -19,10 +24,11 @@ pub struct Direction(pub IVec2);
 
 /// How often an item is harvested, in seconds
 #[derive(Component)]
+#[require(HarvestState)]
 pub struct HarvestSpeed(pub f32);
 
 /// How long along a harvest the machine currently is
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct HarvestState(pub f32);
 
 /// Types of resources this machine can harvest
@@ -32,10 +38,107 @@ pub struct HarvestableNodes(pub HashSet<ResourceNodeType>);
 #[derive(Resource, Default)]
 pub struct MachineLUT(pub HashMap<TilePos, Entity>);
 
-/// Marker trait for machines which transport from one tile to the next
+/// Marker for machines which transport from one tile to the next
 #[derive(Component)]
 pub struct Transporter;
+
+/// Marker for item being transported
+#[derive(Component)]
+pub struct TransportedItem;
+
+/// Current progress of item being transported
+#[derive(Component)]
+pub struct TransportState(pub f32);
+
+/// Total time taken for an item to be transported
+#[derive(Component)]
+pub struct TransportSpeed(pub f32);
 
 /// Sprites which are cycled through depending on the progress of the machine
 #[derive(Component)]
 pub struct AnimationSprites(pub Vec<EntitySprite>);
+
+#[derive(Bundle)]
+pub struct HarvesterBundle {
+    machine_marker: Machine,
+    output_direction: Direction,
+    tile_pos: TilePos,
+    transform: Transform,
+    animation_sprites: AnimationSprites,
+    // Harvester-specific
+    harvester_marker: Harvester,
+    harvestable_nodes: HarvestableNodes,
+    speed: HarvestSpeed,
+    state: HarvestState,
+}
+impl HarvesterBundle {
+    pub fn new(
+        tile_pos: TilePos,
+        output_direction: IVec2,
+        speed: f32,
+        harvestable_nodes: impl IntoIterator<Item = ResourceNodeType>,
+        sprites: Vec<EntitySprite>,
+    ) -> Self {
+        Self {
+            machine_marker: Machine,
+            harvester_marker: Harvester,
+            harvestable_nodes: HarvestableNodes(HashSet::from_iter(harvestable_nodes)),
+            state: HarvestState(0.),
+            speed: HarvestSpeed(speed),
+            output_direction: Direction(output_direction),
+            transform: tile_pos.as_transform(Z_RESOURCES),
+            tile_pos,
+            animation_sprites: AnimationSprites(sprites),
+        }
+    }
+}
+
+#[derive(Bundle)]
+pub struct TransporterBundle {
+    machine_marker: Machine,
+    output_direction: Direction,
+    tile_pos: TilePos,
+    transform: Transform,
+    animation_sprites: AnimationSprites,
+    // Transporter-specific
+    transporter_marker: Transporter,
+    speed: TransportSpeed,
+}
+impl TransporterBundle {
+    pub fn new(
+        tile_pos: TilePos,
+        direction: IVec2,
+        speed: f32,
+        sprites: Vec<EntitySprite>,
+    ) -> Self {
+        Self {
+            machine_marker: Machine,
+            transporter_marker: Transporter,
+            output_direction: Direction(direction),
+            speed: TransportSpeed(speed),
+            transform: tile_pos.as_transform(Z_RESOURCES),
+            tile_pos,
+            animation_sprites: AnimationSprites(sprites),
+        }
+    }
+}
+
+#[derive(Bundle)]
+pub struct TransportedItemBundle {
+    transporter: ChildOf,
+    transport_state: TransportState,
+    marker: TransportedItem,
+    transform: Transform,
+}
+impl TransportedItemBundle {
+    pub fn new(transporter: Entity, transporter_direction: &Direction) -> Self {
+        Self {
+            transporter: ChildOf(transporter),
+            transport_state: TransportState(0.),
+            marker: TransportedItem,
+            transform: Transform::from_translation(
+                (transporter_direction.0.as_vec2() * 0.5).extend(Z_TRANSPORTED_ITEM),
+            ),
+        }
+    }
+}

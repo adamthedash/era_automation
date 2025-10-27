@@ -30,6 +30,8 @@ pub const Z_PLAYER: f32 = 3.;
 pub const Z_HELD_ITEM: f32 = 1e-1;
 /// Z relative to Z_HELD_ITEM
 pub const Z_CONTAINED_ITEM: f32 = -1e-2;
+/// Z relative to Z_RESOURCES
+pub const Z_TRANSPORTED_ITEM: f32 = 1e-1;
 
 /// Tiles around the starting point which can't be water terrain
 pub const TERRAIN_STARTING_RADIUS: i32 = 25;
