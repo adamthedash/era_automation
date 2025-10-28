@@ -18,8 +18,8 @@ pub fn tick_harvesters(
     machines: Query<
         (
             &TilePos,
-            &mut HarvestState,
-            &HarvestSpeed,
+            &mut MachineState,
+            &MachineSpeed,
             &Direction,
             &HarvestableNodes,
         ),
@@ -199,11 +199,8 @@ pub fn pickup_machine(
 
 /// Move items along the transporter
 pub fn tick_transporters(
-    mut transported_items: Query<
-        (Entity, &mut Transform, &mut TransportState),
-        With<TransportedBy>,
-    >,
-    transporters: Query<(&TransportSpeed, &Direction, &Children, &TilePos), With<Transporter>>,
+    mut transported_items: Query<(Entity, &mut Transform, &mut MachineState), With<TransportedBy>>,
+    transporters: Query<(&MachineSpeed, &Direction, &Children, &TilePos), With<Transporter>>,
     machine_lut: Res<MachineLUT>,
     timer: Res<Time>,
     mut commands: Commands,
@@ -255,8 +252,8 @@ pub fn animate_machine(
     machines: Query<
         (
             Entity,
-            &HarvestState,
-            &HarvestSpeed,
+            &MachineState,
+            &MachineSpeed,
             &Children,
             &AnimationSprites,
         ),
@@ -301,7 +298,7 @@ pub fn rotate_machine(
 
 /// Advance the state of the picker-upper if there's an item on its tile
 pub fn tick_pickerupper(
-    machines: Query<(&TilePos, &mut PickupState, &PickupSpeed, &Direction), With<PickerUpper>>,
+    machines: Query<(&TilePos, &mut MachineState, &MachineSpeed, &Direction), With<PickerUpper>>,
     machine_lut: Res<MachineLUT>,
     transporters: Query<(), With<Transporter>>,
     ground_items: Query<(Entity, &WorldPos), With<GroundItem>>,
