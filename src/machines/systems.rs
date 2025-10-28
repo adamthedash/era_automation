@@ -157,7 +157,7 @@ pub fn place_machine(
 pub fn pickup_machine(
     player: Single<Entity, With<Player>>,
     targetted_machine: Single<
-        (Entity, &Machine, &Transporting, &TilePos),
+        (Entity, &Machine, Option<&Transporting>, &TilePos),
         (With<Placed>, With<Machine>, With<Targetted>),
     >,
     mut machine_lut: ResMut<MachineLUT>,
@@ -167,11 +167,13 @@ pub fn pickup_machine(
     info!("Picking up {:?} at {:?}", machine_type, pos.0);
 
     // Drop items out of machine
-    for entity in items.iter() {
-        commands
-            .entity(entity)
-            .remove::<TransportedItemBundle>()
-            .insert(GroundItemBundle::new(&pos.as_world_pos()));
+    if let Some(items) = items {
+        for entity in items.iter() {
+            commands
+                .entity(entity)
+                .remove::<TransportedItemBundle>()
+                .insert(GroundItemBundle::new(&pos.as_world_pos()));
+        }
     }
 
     // Move machine from ground to player
