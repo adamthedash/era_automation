@@ -45,9 +45,15 @@ pub struct MachineLUT(pub HashMap<TilePos, Entity>);
 #[derive(Component)]
 pub struct Transporter;
 
-/// Marker for item being transported
+/// Relationship for an item being transported by a transporter
 #[derive(Component)]
-pub struct TransportedItem;
+#[relationship(relationship_target = Transporting)]
+pub struct TransportedBy(pub Entity);
+
+/// Relationship for a transporter
+#[derive(Component)]
+#[relationship_target(relationship = TransportedBy)]
+pub struct Transporting(Vec<Entity>);
 
 /// Current progress of item being transported
 #[derive(Component)]
@@ -156,17 +162,17 @@ impl PlacedTransporterBundle {
 /// For items on conveyor belts
 #[derive(Bundle)]
 pub struct TransportedItemBundle {
-    transporter: ChildOf,
+    parent: ChildOf,
+    transporter: TransportedBy,
     transport_state: TransportState,
-    marker: TransportedItem,
     transform: Transform,
 }
 impl TransportedItemBundle {
     pub fn new(transporter: Entity, transporter_direction: &Direction) -> Self {
         Self {
-            transporter: ChildOf(transporter),
+            parent: ChildOf(transporter),
+            transporter: TransportedBy(transporter),
             transport_state: TransportState(0.),
-            marker: TransportedItem,
             transform: Transform::from_translation(
                 (transporter_direction.0.as_vec2() * 0.5).extend(Z_TRANSPORTED_ITEM),
             ),

@@ -150,10 +150,9 @@ pub fn place_machine(
 pub fn pickup_machine(
     player: Single<Entity, With<Player>>,
     targetted_machine: Single<
-        (Entity, &Machine, &Children, &TilePos),
+        (Entity, &Machine, &Transporting, &TilePos),
         (With<Placed>, With<Machine>, With<Targetted>),
     >,
-    transported_items: Query<(), With<TransportedItem>>,
     mut machine_lut: ResMut<MachineLUT>,
     mut commands: Commands,
 ) {
@@ -161,16 +160,12 @@ pub fn pickup_machine(
     info!("Picking up {:?} at {:?}", machine_type, pos.0);
 
     // Drop items out of machine
-    items
-        .iter()
-        // TODO: Transporting - TransportedBy relationship instead
-        .filter(|entity| transported_items.contains(*entity))
-        .for_each(|entity| {
-            commands
-                .entity(entity)
-                .remove::<TransportedItemBundle>()
-                .insert(GroundItemBundle::new(&pos.as_world_pos()));
-        });
+    for entity in items.iter() {
+        commands
+            .entity(entity)
+            .remove::<TransportedItemBundle>()
+            .insert(GroundItemBundle::new(&pos.as_world_pos()));
+    }
 
     // Move machine from ground to player
     match machine_type {
@@ -194,7 +189,7 @@ pub fn pickup_machine(
 pub fn tick_transporters(
     mut transported_items: Query<
         (Entity, &mut Transform, &mut TransportState),
-        With<TransportedItem>,
+        With<TransportedBy>,
     >,
     transporters: Query<(&TransportSpeed, &Direction, &Children, &TilePos), With<Transporter>>,
     machine_lut: Res<MachineLUT>,
