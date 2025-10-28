@@ -1,9 +1,9 @@
 use std::f32::consts::FRAC_PI_2;
 
-use bevy::prelude::*;
+use bevy::{platform::collections::HashMap, prelude::*};
 
 use crate::{
-    ground_items::GroundItemBundle,
+    ground_items::{GroundItem, GroundItemBundle},
     items::ItemType,
     map::{TilePos, WorldPos},
     player::{HeldBy, HeldItemBundle, Holding, Player, Targetted},
@@ -123,6 +123,8 @@ pub fn place_machine(
         return;
     };
 
+    info!("Placing machine {:?} at {:?}", machine_type, tile_pos.0);
+
     machines.0.insert(tile_pos, machine);
 
     // Place the machine
@@ -142,6 +144,11 @@ pub fn place_machine(
             commands
                 .entity(machine)
                 .insert(PlacedTransporterBundle::new(tile_pos, IVec2::X));
+        }
+        Machine::PickerUpper => {
+            commands
+                .entity(machine)
+                .insert(PlacedPickerUpperBundle::new(tile_pos, IVec2::X));
         }
     }
 }
@@ -174,6 +181,9 @@ pub fn pickup_machine(
         }
         Machine::Transporter => {
             commands.entity(machine).remove::<PlacedTransporterBundle>();
+        }
+        Machine::PickerUpper => {
+            commands.entity(machine).remove::<PlacedPickerUpperBundle>();
         }
     }
 
@@ -285,4 +295,72 @@ pub fn rotate_machine(
 
     targetted_machine.0.0 = right_turn.rotate(targetted_machine.0.0);
     targetted_machine.1.rotate_z(-FRAC_PI_2);
+}
+
+/// Advance the state of the picker-upper if there's an item on its tile
+pub fn tick_pickerupper(
+    machines: Query<(&TilePos, &mut PickupState, &PickupSpeed, &Direction), With<PickerUpper>>,
+    machine_lut: Res<MachineLUT>,
+    transporters: Query<(), With<Transporter>>,
+    ground_items: Query<(Entity, &WorldPos), With<GroundItem>>,
+    timer: Res<Time>,
+    mut commands: Commands,
+) {
+    // Create LUT for ground items
+    // TODO: replace this with some spatial query data structure stored as a resource
+    let ground_items = ground_items.iter().fold(
+        HashMap::<_, Vec<_>>::new(),
+        |mut hm, (entity, world_pos)| {
+            // NOTE: +0.5 so we search centre of tile instead of origin corner
+            hm.entry((world_pos + Vec2::splat(0.5)).tile())
+                .or_default()
+                .push(entity);
+
+            hm
+        },
+    );
+
+    for (machine_pos, mut state, speed, direction) in machines {
+        let Some(items) = ground_items.get(machine_pos) else {
+            // No items, reset progress
+            state.0 = 0.;
+            continue;
+        };
+
+        // Advance state
+        state.0 += timer.delta_secs();
+        if state.0 >= speed.0 {
+            state.0 -= speed.0;
+
+            // Pick up an item
+            let item = *items
+                .first()
+                .expect("If hashmap has entry, there should be at least 1 item");
+            commands.entity(item).remove::<GroundItemBundle>();
+
+            let behind = machine_pos + direction.0;
+
+            // Check if there's something beside it
+            if let Some(adjacent_machine) = machine_lut.0.get(&behind) {
+                // Put item in the machine next to it
+                // TODO: Some abstraction over "machine that can accept items"
+                if transporters.contains(*adjacent_machine) {
+                    info!("Transferring item Picker-upper -> transporter");
+                    // Another transporter
+                    commands
+                        .entity(item)
+                        .insert(TransportedItemBundle::new(*adjacent_machine, direction));
+                } else {
+                    // Different type of machine
+                    todo!()
+                }
+            } else {
+                info!("Transferring item Picker-upper -> ground");
+                // Drop item on ground
+                commands
+                    .entity(item)
+                    .insert(GroundItemBundle::new(&behind.as_world_pos()));
+            }
+        }
+    }
 }

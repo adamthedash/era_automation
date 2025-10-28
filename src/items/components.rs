@@ -2,7 +2,7 @@ use bevy::{platform::collections::HashSet, prelude::*};
 
 use crate::{
     container::{ContainableItems, Container},
-    machines::{HarvesterBundle, TransporterBundle},
+    machines::{HarvesterBundle, PickerUpperBundle, TransporterBundle},
     resources::{ResourceNodeType, ResourceType},
     sprites::{EntitySprite, GetSprite, ItemSprite, SpriteSheets},
 };
@@ -16,6 +16,7 @@ pub enum ItemType {
     Bowl,
     Harvester,
     Transporter,
+    PickerUpper,
 }
 
 impl ItemType {
@@ -28,6 +29,7 @@ impl ItemType {
             Bowl => ItemSprite::Bowl,
             Harvester => ItemSprite::Harvester,
             Transporter => ItemSprite::Transporter,
+            PickerUpper => ItemSprite::PickerUpper,
         }
     }
 
@@ -41,6 +43,7 @@ impl ItemType {
             Bowl => None,
             Harvester => None,
             Transporter => None,
+            PickerUpper => None,
         }
     }
 
@@ -67,6 +70,9 @@ impl ItemType {
             }
             Transporter => {
                 commands.insert(TransporterBundle::new(2., vec![EntitySprite::Transporter]));
+            }
+            PickerUpper => {
+                commands.insert(PickerUpperBundle::new(2., vec![EntitySprite::Transporter]));
             }
             _ => (),
         }

@@ -35,7 +35,7 @@ pub fn init_knowledge(mut commands: Commands) {
                 amount: 0,
             },
             UnlockRequirement::TotalDeposited {
-                resource: ResourceType::Water,
+                resource: ResourceType::Food,
                 amount: 0,
             },
         ]),
@@ -53,6 +53,14 @@ pub fn init_knowledge(mut commands: Commands) {
         Recipe {
             reqs: vec![(ResourceType::Wood, 5)],
             product: ItemType::Transporter,
+        },
+    ));
+    commands.spawn((
+        UnlockName("Picker-upper".to_string()),
+        UnlockRequirements(vec![]),
+        Recipe {
+            reqs: vec![(ResourceType::Wood, 5)],
+            product: ItemType::PickerUpper,
         },
     ));
     commands.spawn((

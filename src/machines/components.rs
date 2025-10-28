@@ -16,6 +16,7 @@ use crate::{
 pub enum Machine {
     Harvester,
     Transporter,
+    PickerUpper,
 }
 
 /// Marker for harvesting machines
@@ -70,6 +71,18 @@ pub struct AnimationSprites(pub Vec<EntitySprite>);
 /// Marker for machines placed in the world
 #[derive(Component)]
 pub struct Placed;
+
+/// Marker for picker-upper machines
+#[derive(Component)]
+pub struct PickerUpper;
+
+/// How often an item is picked up in seconds
+#[derive(Component)]
+pub struct PickupSpeed(pub f32);
+
+/// Current progress towards picking up an item
+#[derive(Component)]
+pub struct PickupState(pub f32);
 
 /// For harvester machines at all times
 #[derive(Bundle)]
@@ -176,6 +189,48 @@ impl TransportedItemBundle {
             transform: Transform::from_translation(
                 (transporter_direction.0.as_vec2() * 0.5).extend(Z_TRANSPORTED_ITEM),
             ),
+        }
+    }
+}
+
+/// For picker-upper machines at all times
+#[derive(Bundle)]
+pub struct PickerUpperBundle {
+    machine_marker: Machine,
+    animation_sprites: AnimationSprites,
+    pickerupper_marker: PickerUpper,
+    speed: PickupSpeed,
+}
+impl PickerUpperBundle {
+    pub fn new(speed: f32, sprites: Vec<EntitySprite>) -> Self {
+        Self {
+            machine_marker: Machine::PickerUpper,
+            animation_sprites: AnimationSprites(sprites),
+            pickerupper_marker: PickerUpper,
+            speed: PickupSpeed(speed),
+        }
+    }
+}
+
+/// For picker-upper machines when placed down
+#[derive(Bundle)]
+pub struct PlacedPickerUpperBundle {
+    output_direction: Direction,
+    tile_pos: TilePos,
+    transform: Transform,
+    placed: Placed,
+    targettable: Targettable,
+    pickup_state: PickupState,
+}
+impl PlacedPickerUpperBundle {
+    pub fn new(tile_pos: TilePos, direction: IVec2) -> Self {
+        Self {
+            output_direction: Direction(direction),
+            transform: tile_pos.as_transform(Z_RESOURCES),
+            tile_pos,
+            placed: Placed,
+            targettable: Targettable,
+            pickup_state: PickupState(0.),
         }
     }
 }

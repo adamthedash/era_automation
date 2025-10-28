@@ -8,7 +8,7 @@ use crate::{
 };
 
 /// Discrete tile locations - World space
-#[derive(Component, Hash, PartialEq, Eq, Clone, Copy)]
+#[derive(Component, Hash, PartialEq, Eq, Clone, Copy, Debug)]
 pub struct TilePos(pub IVec2);
 impl TilePos {
     /// Convert to transform in display space

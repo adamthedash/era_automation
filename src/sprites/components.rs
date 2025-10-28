@@ -43,6 +43,7 @@ pub enum ItemSprite {
     Bowl,
     Harvester,
     Transporter,
+    PickerUpper,
 }
 
 /// Holds a spritesheet image & layout info

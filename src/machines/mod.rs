@@ -11,7 +11,10 @@ pub struct MachinePlugin;
 impl Plugin for MachinePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<MachineLUT>()
-            .add_systems(FixedUpdate, (tick_harvesters, tick_transporters))
+            .add_systems(
+                FixedUpdate,
+                (tick_harvesters, tick_transporters, tick_pickerupper),
+            )
             .add_systems(
                 Update,
                 (
