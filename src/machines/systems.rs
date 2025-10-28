@@ -146,6 +146,50 @@ pub fn place_machine(
     }
 }
 
+/// Pickup a machine, dropping and contained items on the ground
+pub fn pickup_machine(
+    player: Single<Entity, With<Player>>,
+    targetted_machine: Single<
+        (Entity, &Machine, &Children, &TilePos),
+        (With<Placed>, With<Machine>, With<Targetted>),
+    >,
+    transported_items: Query<(), With<TransportedItem>>,
+    mut machine_lut: ResMut<MachineLUT>,
+    mut commands: Commands,
+) {
+    let (machine, machine_type, items, pos) = *targetted_machine;
+    info!("Picking up {:?} at {:?}", machine_type, pos.0);
+
+    // Drop items out of machine
+    items
+        .iter()
+        // TODO: Transporting - TransportedBy relationship instead
+        .filter(|entity| transported_items.contains(*entity))
+        .for_each(|entity| {
+            commands
+                .entity(entity)
+                .remove::<TransportedItemBundle>()
+                .insert(GroundItemBundle::new(&pos.as_world_pos()));
+        });
+
+    // Move machine from ground to player
+    match machine_type {
+        Machine::Harvester => {
+            commands.entity(machine).remove::<PlacedHarvesterBundle>();
+        }
+        Machine::Transporter => {
+            commands.entity(machine).remove::<PlacedTransporterBundle>();
+        }
+    }
+
+    commands
+        .entity(machine)
+        .insert(HeldItemBundle::new(*player));
+
+    // Remove LUT entry for the machine
+    machine_lut.0.remove(pos);
+}
+
 /// Move items along the transporter
 pub fn tick_transporters(
     mut transported_items: Query<

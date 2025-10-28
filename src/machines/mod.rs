@@ -5,7 +5,7 @@ use bevy::prelude::*;
 pub use components::*;
 use systems::*;
 
-use crate::utils::run_if::key_just_pressed;
+use crate::utils::run_if::{empty_hands, key_just_pressed};
 
 pub struct MachinePlugin;
 impl Plugin for MachinePlugin {
@@ -15,7 +15,8 @@ impl Plugin for MachinePlugin {
             .add_systems(
                 Update,
                 (
-                    place_machine.run_if(key_just_pressed(KeyCode::KeyP)),
+                    (place_machine, pickup_machine.run_if(empty_hands))
+                        .run_if(key_just_pressed(KeyCode::KeyP)),
                     rotate_machine.run_if(key_just_pressed(KeyCode::KeyR)),
                     animate_machine,
                 ),

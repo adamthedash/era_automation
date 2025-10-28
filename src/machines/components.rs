@@ -11,8 +11,8 @@ use crate::{
     sprites::EntitySprite,
 };
 
-/// Marker for machines
-#[derive(Component)]
+/// Marker for machines, also machine type
+#[derive(Component, Debug)]
 pub enum Machine {
     Harvester,
     Transporter,
@@ -65,12 +65,11 @@ pub struct AnimationSprites(pub Vec<EntitySprite>);
 #[derive(Component)]
 pub struct Placed;
 
-/// For harvester machines
+/// For harvester machines at all times
 #[derive(Bundle)]
 pub struct HarvesterBundle {
     machine_marker: Machine,
     animation_sprites: AnimationSprites,
-    // Harvester-specific
     harvester_marker: Harvester,
     harvestable_nodes: HarvestableNodes,
     speed: HarvestSpeed,
@@ -91,6 +90,7 @@ impl HarvesterBundle {
     }
 }
 
+/// For harvester machines when placed down
 #[derive(Bundle)]
 pub struct PlacedHarvesterBundle {
     tile_pos: TilePos,
@@ -113,12 +113,11 @@ impl PlacedHarvesterBundle {
     }
 }
 
-/// For conveyor belts
+/// For transporter machines at all times
 #[derive(Bundle)]
 pub struct TransporterBundle {
     machine_marker: Machine,
     animation_sprites: AnimationSprites,
-    // Transporter-specific
     transporter_marker: Transporter,
     speed: TransportSpeed,
 }
@@ -133,6 +132,7 @@ impl TransporterBundle {
     }
 }
 
+/// For transporter machines when placed down
 #[derive(Bundle)]
 pub struct PlacedTransporterBundle {
     output_direction: Direction,
