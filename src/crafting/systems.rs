@@ -45,6 +45,7 @@ pub fn show_crafting_ui(
                     CraftingWindow,
                     Node {
                         display: Display::Flex,
+                        flex_direction: FlexDirection::Column,
                         position_type: PositionType::Absolute,
                         bottom: px(10),
                         right: px(10),
@@ -65,6 +66,7 @@ pub fn show_crafting_ui(
                                 .join(", ")
                         );
 
+                        // Button
                         parent.spawn((
                             Button,
                             CraftingNode,
@@ -73,7 +75,9 @@ pub fn show_crafting_ui(
                             // Render
                             Node {
                                 border: UiRect::all(px(2)),
+                                margin: UiRect::all(px(2)),
                                 padding: UiRect::all(px(4)),
+                                justify_content: JustifyContent::Center,
                                 ..Default::default()
                             },
                             BorderColor::all(Color::WHITE),
