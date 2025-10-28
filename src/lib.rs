@@ -19,3 +19,4 @@ pub mod resources;
 pub mod sprites;
 pub mod utils;
 pub mod village;
+pub mod weather;

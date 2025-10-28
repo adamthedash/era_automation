@@ -13,6 +13,7 @@ use era_automation::{
     resources::ResourcePlugin,
     sprites::SpritePlugin,
     village::VillagePlugin,
+    weather::WeatherPlugin,
 };
 
 fn main() {
@@ -30,6 +31,7 @@ fn main() {
         .add_plugins(ContainerPlugin)
         .add_plugins(DebugPlugin)
         .add_plugins(MachinePlugin)
+        .add_plugins(WeatherPlugin)
         .add_systems(Update, spawn_chunks)
         .run();
 }

@@ -55,3 +55,10 @@ pub const HIGHLIGHT_SCALE: f32 = 1.2;
 pub const ITEM_ROLL_SPEED: f32 = 5.;
 /// Minimum slope required for something to roll
 pub const ROLL_FRICTION: f32 = 0.1;
+
+/// How long fluff particles life in seconds
+pub const FLUFF_LIFETIME: f32 = 20.;
+/// Fade in/out time for fluff particles
+pub const FLUFF_FADE: f32 = 2.;
+/// Frequency of fluff spawning
+pub const FLUFFS_PER_SECOND: f32 = 1.;
