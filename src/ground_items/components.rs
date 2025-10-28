@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 use crate::{
     consts::{GROUND_ITEM_BOB_SPEED, Z_GROUND_ITEM},
+    items::ItemType,
     map::WorldPos,
     player::Targettable,
 };
@@ -41,4 +42,13 @@ impl GroundItemBundle {
             transform: world_pos.as_transform(Z_GROUND_ITEM),
         }
     }
+}
+
+/// Event triggered whenever an item rolls on the ground
+/// TODO: This might be expensive to send every tick
+#[derive(EntityEvent, Debug)]
+pub struct ItemRolled {
+    pub entity: Entity,
+    pub item: ItemType,
+    pub distance: f32,
 }

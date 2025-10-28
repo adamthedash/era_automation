@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use crate::{
-    crafting::Recipe, items::ItemType, player::HarvestEvent, resources::ResourceType,
-    village::DepositEvent,
+    crafting::Recipe, ground_items::ItemRolled, items::ItemType, player::HarvestEvent,
+    resources::ResourceType, village::DepositEvent,
 };
 
 use super::components::*;
@@ -15,11 +15,11 @@ pub fn init_knowledge(mut commands: Commands) {
         UnlockRequirements(vec![
             UnlockRequirement::TotalDeposited {
                 resource: ResourceType::Wood,
-                amount: 1,
+                amount: 5,
             },
             UnlockRequirement::TotalDeposited {
                 resource: ResourceType::Water,
-                amount: 0,
+                amount: 5,
             },
         ]),
         Recipe {
@@ -45,17 +45,11 @@ pub fn init_knowledge(mut commands: Commands) {
         },
     ));
     commands.spawn((
-        UnlockName("Transported".to_string()),
-        UnlockRequirements(vec![
-            UnlockRequirement::TotalDeposited {
-                resource: ResourceType::Wood,
-                amount: 0,
-            },
-            UnlockRequirement::TotalDeposited {
-                resource: ResourceType::Water,
-                amount: 0,
-            },
-        ]),
+        UnlockName("Transporter".to_string()),
+        UnlockRequirements(vec![UnlockRequirement::TotalRolled {
+            item: ItemType::Log,
+            distance: 10.,
+        }]),
         Recipe {
             reqs: vec![(ResourceType::Wood, 5)],
             product: ItemType::Transporter,
@@ -91,6 +85,9 @@ pub fn check_unlocks(
             UnlockRequirement::TotalDeposited { resource, amount } => {
                 stats.resources_deposited.get(resource).unwrap_or(&0) >= amount
             }
+            UnlockRequirement::TotalRolled { item, distance } => {
+                stats.items_rolled.get(item).unwrap_or(&0.) >= distance
+            }
         }) {
             // Add the Unlocked tag
             info!("Unlocked knowledge: {:?}", name);
@@ -112,4 +109,10 @@ pub fn update_harvest_statistics(event: On<HarvestEvent>, mut stats: ResMut<Gath
 pub fn update_deposit_statistics(event: On<DepositEvent>, mut stats: ResMut<GatheringStatistics>) {
     info!("Updating stats: {:?}", event);
     *stats.resources_deposited.entry(event.resource).or_default() += event.amount;
+}
+
+/// Update lifetime statistics
+pub fn update_roll_statistics(event: On<ItemRolled>, mut stats: ResMut<GatheringStatistics>) {
+    // info!("Updating stats: {:?}", event);
+    *stats.items_rolled.entry(event.item).or_default() += event.distance;
 }

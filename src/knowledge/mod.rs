@@ -13,6 +13,7 @@ impl Plugin for KnowledgePlugin {
             .add_systems(Startup, init_knowledge)
             .add_systems(Update, check_unlocks)
             .add_observer(update_harvest_statistics)
-            .add_observer(update_deposit_statistics);
+            .add_observer(update_deposit_statistics)
+            .add_observer(update_roll_statistics);
     }
 }

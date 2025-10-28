@@ -5,6 +5,7 @@ use bevy::prelude::*;
 
 use crate::{
     consts::{GROUND_ITEM_BOB_HEIGHT, ITEM_ROLL_SPEED, ROLL_FRICTION},
+    items::ItemType,
     map::{ChunkLUT, GradientData, WorldPos},
     player::{HeldItemBundle, Holding, Player, Targetted},
 };
@@ -72,12 +73,13 @@ pub fn pickup_item(
 
 /// Roll items according to the terrain gradient
 pub fn roll_items(
-    items: Query<&mut WorldPos, With<GroundItem>>,
+    items: Query<(Entity, &ItemType, &mut WorldPos), With<GroundItem>>,
     chunk_lut: Res<ChunkLUT>,
     gradients: Query<&GradientData>,
     timer: Res<Time>,
+    mut commands: Commands,
 ) {
-    for mut item_pos in items {
+    for (item, item_type, mut item_pos) in items {
         let (chunk_pos, offset) = item_pos.tile().to_chunk_offset();
 
         let chunk = chunk_lut
@@ -98,6 +100,13 @@ pub fn roll_items(
 
         // Roll the item dowmhill
         // TODO: rollability, etc.
-        item_pos.0 -= tile_gradient * timer.delta_secs() * ITEM_ROLL_SPEED;
+        let roll_distance = tile_gradient * timer.delta_secs() * ITEM_ROLL_SPEED;
+        item_pos.0 -= roll_distance;
+
+        commands.trigger(ItemRolled {
+            entity: item,
+            item: *item_type,
+            distance: roll_distance.length(),
+        });
     }
 }

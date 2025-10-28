@@ -1,6 +1,9 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 
-use crate::resources::{ResourceNodeType, ResourceType};
+use crate::{
+    items::ItemType,
+    resources::{ResourceNodeType, ResourceType},
+};
 
 /// Marker trait for knowledge which has been unlocked
 #[derive(Component)]
@@ -19,6 +22,10 @@ pub enum UnlockRequirement {
         resource: ResourceType,
         amount: usize,
     },
+    TotalRolled {
+        item: ItemType,
+        distance: f32,
+    },
 }
 
 /// List of requirements needed to unlock knowledge
@@ -36,4 +43,5 @@ pub struct UnlockEvent {
 pub struct GatheringStatistics {
     pub nodes_gathered: HashMap<ResourceNodeType, usize>,
     pub resources_deposited: HashMap<ResourceType, usize>,
+    pub items_rolled: HashMap<ItemType, f32>,
 }
