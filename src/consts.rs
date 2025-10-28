@@ -32,6 +32,8 @@ pub const Z_HELD_ITEM: f32 = 1e-1;
 pub const Z_CONTAINED_ITEM: f32 = -1e-2;
 /// Z relative to Z_RESOURCES
 pub const Z_TRANSPORTED_ITEM: f32 = 1e-1;
+/// Layer that rain/snow/etc is rendered at
+pub const Z_WEATHER: f32 = 10.;
 
 /// Tiles around the starting point which can't be water terrain
 pub const TERRAIN_STARTING_RADIUS: i32 = 25;
@@ -51,7 +53,7 @@ pub const GROUND_ITEM_BOB_SPEED: f32 = 2.;
 /// How much a sprite is scaled up when being highlighted
 pub const HIGHLIGHT_SCALE: f32 = 1.2;
 
-/// How fast items roll down a hill.
+/// How fast items roll down a hill. Tiles per second @ 1:1 gradient
 pub const ITEM_ROLL_SPEED: f32 = 5.;
 /// Minimum slope required for something to roll
 pub const ROLL_FRICTION: f32 = 0.1;
@@ -62,3 +64,9 @@ pub const FLUFF_LIFETIME: f32 = 20.;
 pub const FLUFF_FADE: f32 = 2.;
 /// Frequency of fluff spawning
 pub const FLUFFS_PER_SECOND: f32 = 1.;
+/// Amount of time over which wind direction/speed changes
+pub const WIND_TRANSITION_TIME: f32 = 5.;
+/// Amount of time wind changes per second
+pub const WIND_CHANGES_PER_SECOND: f32 = 1. / 10.;
+/// Maximum strength of wind in tiles per second
+pub const MAX_WIND_SPEED: f32 = 3.;
