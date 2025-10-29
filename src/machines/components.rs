@@ -51,18 +51,14 @@ impl Machine {
         }
     }
 
-    pub fn accepts_items(&self) -> bool {
-        use Machine::*;
-        match self {
-            Harvester => false,
-            Transporter => true,
-            PickerUpper => false,
-        }
-    }
-
     /// Give an item to this machine. Assumes the item has already been removed from where it was
     /// before and is in a "limbo" state
     pub fn give_item(&self, item: &mut EntityCommands, machine: &EntityRef) {
+        assert!(
+            machine.contains::<AcceptsItems>(),
+            "Machine cannot accept items"
+        );
+
         use Machine::*;
         match self {
             Transporter => {
@@ -80,6 +76,10 @@ impl Machine {
 /// Marker for harvesting machines
 #[derive(Component)]
 pub struct Harvester;
+
+/// Marker for a machine that can have items given to it
+#[derive(Component)]
+pub struct AcceptsItems;
 
 /// The direction the machine is facing towards
 #[derive(Component)]
@@ -188,6 +188,7 @@ pub struct TransporterBundle {
     animation_sprites: AnimationSprites,
     transporter_marker: Transporter,
     speed: MachineSpeed,
+    accepts_items: AcceptsItems,
 }
 impl TransporterBundle {
     pub fn new(speed: f32, sprites: Vec<EntitySprite>) -> Self {
@@ -196,6 +197,7 @@ impl TransporterBundle {
             transporter_marker: Transporter,
             speed: MachineSpeed(speed),
             animation_sprites: AnimationSprites(sprites),
+            accepts_items: AcceptsItems,
         }
     }
 }

@@ -141,7 +141,7 @@ pub fn rotate_machine(
 /// Transfer items from the ether into machines
 pub fn transfer_items(
     mut reader: MessageReader<TransferItem>,
-    machines: Query<(EntityRef, &Machine), With<Placed>>,
+    machines: Query<(EntityRef, &Machine), (With<Placed>, With<AcceptsItems>)>,
     mut commands: Commands,
 ) {
     for TransferItem {
@@ -172,7 +172,7 @@ pub fn tick_harvesters(
     resource_lut: Res<ResourceNodeLUT>,
     resources: Query<(&ResourceNodeType, &ItemType), With<ResourceMarker>>,
     machine_lut: Res<MachineLUT>,
-    machines: Query<(Entity, &Machine)>,
+    machines: Query<(Entity, &Machine), (With<AcceptsItems>, With<Placed>)>,
     timer: Res<Time>,
     sprite_sheets: Res<SpriteSheets>,
     mut commands: Commands,
@@ -220,7 +220,6 @@ pub fn tick_harvesters(
                 .0
                 .get(&behind)
                 .and_then(|entity| machines.get(*entity).ok())
-                && machine_type.accepts_items()
             {
                 info!("Transferring item Harvester -> {:?}", machine_type);
 
@@ -244,7 +243,7 @@ pub fn tick_harvesters(
 pub fn tick_transporters(
     mut transported_items: Query<(Entity, &mut Transform, &mut MachineState), With<TransportedBy>>,
     transporters: Query<(&MachineSpeed, &Direction, &Children, &TilePos), With<Transporter>>,
-    machines: Query<(Entity, &Machine)>,
+    machines: Query<(Entity, &Machine), (With<AcceptsItems>, With<Placed>)>,
     machine_lut: Res<MachineLUT>,
     timer: Res<Time>,
     mut commands: Commands,
@@ -272,7 +271,6 @@ pub fn tick_transporters(
                     .0
                     .get(&adjacent_pos)
                     .and_then(|entity| machines.get(*entity).ok())
-                    && machine_type.accepts_items()
                 {
                     info!("Transferring item Transporter -> {:?}", machine_type);
 
@@ -300,7 +298,7 @@ pub fn tick_pickerupper(
         (&TilePos, &mut MachineState, &MachineSpeed, &Direction),
         With<PickerUpper>,
     >,
-    machines: Query<(Entity, &Machine)>,
+    machines: Query<(Entity, &Machine), (With<AcceptsItems>, With<Placed>)>,
     machine_lut: Res<MachineLUT>,
     ground_items: Query<(Entity, &WorldPos), With<GroundItem>>,
     timer: Res<Time>,
@@ -346,7 +344,6 @@ pub fn tick_pickerupper(
                 .0
                 .get(&behind)
                 .and_then(|entity| machines.get(*entity).ok())
-                && machine_type.accepts_items()
             {
                 info!("Transferring item Picker-upper -> {:?}", machine_type);
 
