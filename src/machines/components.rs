@@ -14,6 +14,7 @@ use crate::{
 /// Marker for machines, also machine type
 #[derive(Component, Debug)]
 pub enum Machine {
+    VillageCentre,
     Harvester,
     Transporter,
     PickerUpper,
@@ -33,6 +34,7 @@ impl Machine {
             PickerUpper => {
                 commands.insert(PlacedPickerUpperBundle::new(pos, direction));
             }
+            VillageCentre => unreachable!("Village centre cannot be placed"),
         }
     }
 
@@ -48,6 +50,7 @@ impl Machine {
             PickerUpper => {
                 commands.remove::<PlacedPickerUpperBundle>();
             }
+            VillageCentre => unreachable!("Village centre cannot be placed"),
         }
     }
 
@@ -68,14 +71,13 @@ impl Machine {
 
                 item.insert(TransportedItemBundle::new(machine.id(), direction));
             }
-            _ => panic!("This machine does not accept items!"),
+            VillageCentre => {
+                //
+            }
+            _ => unreachable!("Machine accepts items but logic not here!"),
         }
     }
 }
-
-/// Marker for harvesting machines
-#[derive(Component)]
-pub struct Harvester;
 
 /// Marker for a machine that can have items given to it
 #[derive(Component)]
@@ -93,12 +95,24 @@ pub struct MachineSpeed(pub f32);
 #[derive(Component, Default)]
 pub struct MachineState(pub f32);
 
+#[derive(Resource, Default)]
+pub struct MachineLUT(pub HashMap<TilePos, Entity>);
+
+/// Sprites which are cycled through depending on the progress of the machine
+#[derive(Component)]
+pub struct AnimationSprites(pub Vec<EntitySprite>);
+
+/// Marker for machines placed in the world
+#[derive(Component)]
+pub struct Placed;
+
+/// Marker for harvesting machines
+#[derive(Component)]
+pub struct Harvester;
+
 /// Types of resources this machine can harvest
 #[derive(Component)]
 pub struct HarvestableNodes(pub HashSet<ResourceNodeType>);
-
-#[derive(Resource, Default)]
-pub struct MachineLUT(pub HashMap<TilePos, Entity>);
 
 /// Marker for machines which transport from one tile to the next
 #[derive(Component)]
@@ -114,22 +128,16 @@ pub struct TransportedBy(pub Entity);
 #[relationship_target(relationship = TransportedBy)]
 pub struct Transporting(Vec<Entity>);
 
-/// Sprites which are cycled through depending on the progress of the machine
-#[derive(Component)]
-pub struct AnimationSprites(pub Vec<EntitySprite>);
-
-/// Marker for machines placed in the world
-#[derive(Component)]
-pub struct Placed;
-
 /// Marker for picker-upper machines
 #[derive(Component)]
 pub struct PickerUpper;
 
+/// Request to transfer an item into a machine
 #[derive(Message)]
 pub struct TransferItem {
     /// Item should be "in limbo"
     pub item: Entity,
+    /// Machine should be placed & accepting items
     pub target_machine: Entity,
 }
 

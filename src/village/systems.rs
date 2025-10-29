@@ -4,6 +4,7 @@ use crate::{
     consts::Z_RESOURCES,
     container::Contains,
     items::ItemType,
+    machines::{AcceptsItems, Machine, MachineLUT, Placed},
     map::TilePos,
     player::{HeldBy, Targettable},
     resources::{ResourceAmount, ResourceType},
@@ -13,7 +14,7 @@ use crate::{
 use super::components::*;
 
 /// Initialise the starting resource stockpiles
-pub fn setup_village(mut commands: Commands, mut lut: ResMut<StockpileLut>) {
+pub fn setup_stockpiles(mut commands: Commands, mut lut: ResMut<StockpileLut>) {
     use ResourceType::*;
     for res_type in [Wood, Food, Water] {
         let entity = commands.spawn((
@@ -89,7 +90,11 @@ pub fn update_resource_display(
 }
 
 /// Spawn the village centre that's used to deposit items
-pub fn spawn_village_centre(mut commands: Commands, sprite_sheets: Res<SpriteSheets>) {
+pub fn spawn_village_centre(
+    mut commands: Commands,
+    sprite_sheets: Res<SpriteSheets>,
+    mut machine_lut: ResMut<MachineLUT>,
+) {
     let pos = TilePos(IVec2::ZERO);
     let village = commands
         .spawn((
@@ -97,10 +102,15 @@ pub fn spawn_village_centre(mut commands: Commands, sprite_sheets: Res<SpriteShe
             pos.as_transform(Z_RESOURCES),
             VillageCentre,
             Targettable,
+            Machine::VillageCentre,
+            AcceptsItems,
+            Placed,
         ))
         .id();
 
     ResourceSprite::House.spawn_sprite(&mut commands, &sprite_sheets, Some(village));
+
+    machine_lut.0.insert(pos, village);
 }
 
 /// Deposit a held item into the village

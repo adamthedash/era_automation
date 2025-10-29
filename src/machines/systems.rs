@@ -7,8 +7,9 @@ use crate::{
     items::ItemType,
     map::{TilePos, WorldPos},
     player::{HeldBy, HeldItemBundle, Holding, Player, Targetted},
-    resources::{ResourceAmount, ResourceMarker, ResourceNodeLUT, ResourceNodeType},
+    resources::{ResourceAmount, ResourceMarker, ResourceNodeLUT, ResourceNodeType, ResourceType},
     sprites::{GetSprite, SpriteSheets},
+    village::{ResourceStockpile, VillageCentre},
 };
 
 use super::components::*;
@@ -60,7 +61,12 @@ pub fn pickup_machine(
     player: Single<Entity, With<Player>>,
     targetted_machine: Single<
         (Entity, &Machine, Option<&Transporting>, &TilePos),
-        (With<Placed>, With<Machine>, With<Targetted>),
+        (
+            With<Placed>,
+            With<Machine>,
+            With<Targetted>,
+            Without<VillageCentre>,
+        ),
     >,
     mut machine_lut: ResMut<MachineLUT>,
     mut commands: Commands,
@@ -142,6 +148,8 @@ pub fn rotate_machine(
 pub fn transfer_items(
     mut reader: MessageReader<TransferItem>,
     machines: Query<(EntityRef, &Machine), (With<Placed>, With<AcceptsItems>)>,
+    items: Query<(&ItemType, &ResourceAmount)>,
+    mut stockpiles: Query<(&mut ResourceStockpile, &ResourceType)>,
     mut commands: Commands,
 ) {
     for TransferItem {
@@ -149,11 +157,32 @@ pub fn transfer_items(
         target_machine,
     } in reader.read()
     {
+        // Get target machine
         let (machine, machine_type) = machines
             .get(*target_machine)
             .expect("Target machine does not exist!");
 
-        machine_type.give_item(&mut commands.entity(*item), &machine);
+        assert!(
+            machine.contains::<AcceptsItems>(),
+            "Machine cannot accept items"
+        );
+
+        use Machine::*;
+        match machine_type {
+            Transporter => {
+                let direction = machine
+                    .get::<Direction>()
+                    .expect("Machine does not have a direction!");
+
+                commands
+                    .entity(*item)
+                    .insert(TransportedItemBundle::new(machine.id(), direction));
+            }
+            VillageCentre => {
+                todo!()
+            }
+            _ => unreachable!("Machine accepts items but logic not here!"),
+        };
     }
 }
 

@@ -13,7 +13,7 @@ pub struct VillagePlugin;
 impl Plugin for VillagePlugin {
     fn build(&self, app: &mut bevy::app::App) {
         app.init_resource::<StockpileLut>()
-            .add_systems(Startup, (setup_village, setup_resource_display).chain())
+            .add_systems(Startup, (setup_stockpiles, setup_resource_display).chain())
             .add_systems(Startup, spawn_village_centre)
             .add_systems(
                 Update,
