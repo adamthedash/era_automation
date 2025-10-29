@@ -19,6 +19,64 @@ pub enum Machine {
     PickerUpper,
 }
 
+impl Machine {
+    /// Add components for when machines are placed down
+    pub fn place(&self, commands: &mut EntityCommands, pos: TilePos, direction: IVec2) {
+        use Machine::*;
+        match self {
+            Harvester => {
+                commands.insert(PlacedHarvesterBundle::new(pos, direction));
+            }
+            Transporter => {
+                commands.insert(PlacedTransporterBundle::new(pos, direction));
+            }
+            PickerUpper => {
+                commands.insert(PlacedPickerUpperBundle::new(pos, direction));
+            }
+        }
+    }
+
+    pub fn unplace(&self, commands: &mut EntityCommands) {
+        use Machine::*;
+        match self {
+            Harvester => {
+                commands.remove::<PlacedHarvesterBundle>();
+            }
+            Transporter => {
+                commands.remove::<PlacedTransporterBundle>();
+            }
+            PickerUpper => {
+                commands.remove::<PlacedPickerUpperBundle>();
+            }
+        }
+    }
+
+    pub fn accepts_items(&self) -> bool {
+        use Machine::*;
+        match self {
+            Harvester => false,
+            Transporter => true,
+            PickerUpper => false,
+        }
+    }
+
+    /// Give an item to this machine. Assumes the item has already been removed from where it was
+    /// before and is in a "limbo" state
+    pub fn give_item(&self, item: &mut EntityCommands, machine: &EntityRef) {
+        use Machine::*;
+        match self {
+            Transporter => {
+                let direction = machine
+                    .get::<Direction>()
+                    .expect("Machine does not have a direction!");
+
+                item.insert(TransportedItemBundle::new(machine.id(), direction));
+            }
+            _ => panic!("This machine does not accept items!"),
+        }
+    }
+}
+
 /// Marker for harvesting machines
 #[derive(Component)]
 pub struct Harvester;
@@ -67,6 +125,13 @@ pub struct Placed;
 /// Marker for picker-upper machines
 #[derive(Component)]
 pub struct PickerUpper;
+
+#[derive(Message)]
+pub struct TransferItem {
+    /// Item should be "in limbo"
+    pub item: Entity,
+    pub target_machine: Entity,
+}
 
 /// For harvester machines at all times
 #[derive(Bundle)]
