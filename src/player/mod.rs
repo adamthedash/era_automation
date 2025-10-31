@@ -21,7 +21,6 @@ impl Plugin for PlayerPlugin {
                     show_water_icon,
                     harvest_water.run_if(
                         key_just_pressed(KeyCode::Space)
-                            .and(empty_hands)
                             // Targets take precedence
                             .and(|targets: Query<(), With<Targetted>>| targets.is_empty()),
                     ),

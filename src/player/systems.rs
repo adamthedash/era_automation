@@ -10,6 +10,7 @@ use crate::{
         CAMERA_ZOOM, HIGHLIGHT_SCALE, PLAYER_REACH, PLAYER_SPEED, RESOURCE_PICKUP_AMOUNT,
         Z_HELD_ITEM, Z_PLAYER,
     },
+    container::{ContainableItems, ContainedBundle},
     items::ItemType,
     map::{ChunkLUT, TerrainData, TilePos, WorldPos},
     resources::{ResourceAmount, ResourceMarker, ResourceNodeType},
@@ -229,7 +230,8 @@ pub fn check_near_water(
 
 /// Shows the water icon when the player is near the water
 pub fn show_water_icon(
-    player: Single<(Entity, Has<NearWater>, Has<Holding>), With<Player>>,
+    player: Single<(Entity, Has<NearWater>, Option<&Holding>), With<Player>>,
+    containers: Query<&ContainableItems>,
     targets: Query<(), With<Targetted>>,
     water_icon: Option<Single<Entity, With<WaterIcon>>>,
     mut commands: Commands,
@@ -237,13 +239,19 @@ pub fn show_water_icon(
 ) {
     let (player, near_water, held_item) = *player;
 
-    debug!(
-        "targets {:?} water {:?} holding {:?}",
-        targets.iter().len(),
-        near_water,
-        held_item
-    );
-    let show_icon = targets.is_empty() && near_water && !held_item;
+    let can_hold = if let Some(holding) = held_item {
+        // Check if the item the player is holding is a container that can hold water
+        let item = holding.iter().next().unwrap();
+
+        containers
+            .get(item)
+            .is_ok_and(|containables| containables.0.contains(&ItemType::Water))
+    } else {
+        // Not holding anything
+        true
+    };
+
+    let show_icon = targets.is_empty() && near_water && can_hold;
 
     match (show_icon, water_icon) {
         (true, None) => {
@@ -270,20 +278,39 @@ pub fn show_water_icon(
 /// Pick up some water from an infinite source
 pub fn harvest_water(
     mut commands: Commands,
-    player: Single<Entity, (With<Player>, With<NearWater>)>,
+    player: Single<(Entity, Option<&Holding>), (With<Player>, With<NearWater>)>,
+    containers: Query<&ContainableItems>,
     sprite_sheets: Res<SpriteSheets>,
 ) {
-    // Add item to player
-    let entity = commands
+    let container = player.1.and_then(|holding| {
+        let item = holding.iter().next().unwrap();
+
+        containers
+            .get(item)
+            .ok()
+            .filter(|containables| containables.0.contains(&ItemType::Water))
+            .map(|_| item)
+    });
+
+    // Spawn water item in the void
+    let item = commands
         .spawn((
-            HeldItemBundle::new(*player),
             // Game data
             ItemType::Water,
             ResourceAmount(RESOURCE_PICKUP_AMOUNT),
         ))
         .id();
+    ItemSprite::Water.spawn_sprite(&mut commands, &sprite_sheets, Some(item));
 
-    ItemSprite::Water.spawn_sprite(&mut commands, &sprite_sheets, Some(entity));
+    if let Some(container) = container {
+        // Put the item in the container
+        commands
+            .entity(item)
+            .insert(ContainedBundle::new(container));
+    } else {
+        // Give item to player directly
+        commands.entity(item).insert(HeldItemBundle::new(player.0));
+    }
 
     commands.trigger(HarvestEvent {
         resource_node: ResourceNodeType::Water,
