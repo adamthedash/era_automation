@@ -7,7 +7,7 @@ use crate::{
     items::ItemType,
     map::{TilePos, WorldPos},
     player::{HeldBy, HeldItemBundle, Holding, Player, Targetted},
-    resources::{ResourceAmount, ResourceMarker, ResourceNodeLUT, ResourceNodeType},
+    resources::{ResourceMarker, ResourceNodeLUT, ResourceNodeType},
     sprites::{GetSprite, SpriteSheets},
     village::{DepositEvent, ResourceStockpile, StockpileLut, VillageCentre},
 };
@@ -149,7 +149,6 @@ pub fn transfer_items(
     mut reader: MessageReader<TransferItem>,
     machines: Query<(EntityRef, &Machine, &AcceptsItems), With<Placed>>,
     items: Query<&ItemType>,
-    resource_items: Query<(&ItemType, &ResourceAmount)>,
     mut stockpiles: Query<&mut ResourceStockpile, (Without<ItemType>, Without<Machine>)>,
     stockpile_lut: Res<StockpileLut>,
     mut commands: Commands,
@@ -184,10 +183,6 @@ pub fn transfer_items(
                     .insert(TransportedItemBundle::new(machine.id(), direction));
             }
             VillageCentre => {
-                let (item_type, amount) = resource_items
-                    .get(*item)
-                    .expect("Item does not provide a resource!");
-
                 let resource = item_type
                     .resource_type()
                     .expect("Item does not provide a resource!");
@@ -198,15 +193,14 @@ pub fn transfer_items(
                     .and_then(|entity| stockpiles.get_mut(*entity).ok())
                     .expect("Stockpile not created!");
 
-                stockpile.0 += amount.0 as f32;
+                // TODO: Different items giving different amounts of a resource
+                let amount = 1;
+                stockpile.0 += amount as f32;
 
                 // Remove the item
                 commands.entity(*item).despawn();
 
-                commands.trigger(DepositEvent {
-                    resource,
-                    amount: amount.0,
-                });
+                commands.trigger(DepositEvent { resource, amount });
             }
             _ => unreachable!("Machine accepts items but logic not here!"),
         };
@@ -262,13 +256,7 @@ pub fn tick_harvesters(
             let behind = tile_pos - direction.0;
 
             // Spawn an item
-            let item = commands
-                .spawn((
-                    // Game data
-                    *item_type,
-                    ResourceAmount(1),
-                ))
-                .id();
+            let item = commands.spawn(*item_type).id();
             item_type.spawn_sprite(&mut commands, &sprite_sheets, Some(item));
 
             // Check if there's something beside it

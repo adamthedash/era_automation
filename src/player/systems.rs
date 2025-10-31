@@ -163,7 +163,6 @@ pub fn harvest_resource(
             HeldItemBundle::new(*player),
             // Game data
             *item_type,
-            ResourceAmount(pickup_amount),
         ))
         .id();
 
@@ -293,13 +292,7 @@ pub fn harvest_water(
     });
 
     // Spawn water item in the void
-    let item = commands
-        .spawn((
-            // Game data
-            ItemType::Water,
-            ResourceAmount(RESOURCE_PICKUP_AMOUNT),
-        ))
-        .id();
+    let item = commands.spawn(ItemType::Water).id();
     ItemSprite::Water.spawn_sprite(&mut commands, &sprite_sheets, Some(item));
 
     if let Some(container) = container {
