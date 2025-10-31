@@ -8,7 +8,7 @@ use crate::{
     map::{TilePos, WorldPos},
     player::{HeldItemBundle, Holding, Player},
     sprites::{GetSprite, SpriteSheets},
-    village::{ResourceStockpile, StockpileLut, VillageCentre},
+    village::{ResourceStockpile, Stockpiles, VillageCentre},
 };
 
 /// Checks if the player is within range of a crafting station
@@ -112,8 +112,7 @@ pub fn crafting_button(
 /// Process crafting requests
 pub fn try_craft_recipes(
     mut reader: MessageReader<CraftRecipe>,
-    stockpile_lut: Res<StockpileLut>,
-    mut resources: Query<&mut ResourceStockpile>,
+    mut stockpiles: Stockpiles<&mut ResourceStockpile>,
     player: Single<(Entity, Has<Holding>), (With<Player>, Without<ResourceStockpile>)>,
     sprite_sheets: Res<SpriteSheets>,
     mut commands: Commands,
@@ -135,10 +134,7 @@ pub fn try_craft_recipes(
 
         // Check if we've got enough resources
         if recipe.reqs.iter().all(|(res_type, amount)| {
-            let stockpile = stockpile_lut
-                .0
-                .get(res_type)
-                .and_then(|entity| resources.get(*entity).ok());
+            let stockpile = stockpiles.get(res_type);
 
             stockpile.is_some_and(|stockpile| stockpile.0 >= *amount as f32)
         }) {
@@ -146,10 +142,8 @@ pub fn try_craft_recipes(
 
             // Remove resources
             for (res_type, amount) in &recipe.reqs {
-                let mut stockpile = stockpile_lut
-                    .0
-                    .get(res_type)
-                    .and_then(|entity| resources.get_mut(*entity).ok())
+                let mut stockpile = stockpiles
+                    .get_mut(res_type)
                     .expect("Already checked they exist above");
 
                 stockpile.0 -= *amount as f32;

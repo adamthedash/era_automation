@@ -1,7 +1,9 @@
+use bevy::platform::collections::HashMap;
 use bevy::prelude::*;
-use std::collections::HashMap;
+use std::ops::Deref;
 
 use crate::resources::ResourceType;
+use crate::utils::query::LUTParam;
 
 /// Tracks the amount of a resource stored in the village
 #[derive(Component)]
@@ -18,6 +20,16 @@ pub struct ResourceName(pub String);
 /// Lookup table for stockpile entities
 #[derive(Resource, Default)]
 pub struct StockpileLut(pub HashMap<ResourceType, Entity>);
+
+impl Deref for StockpileLut {
+    type Target = HashMap<ResourceType, Entity>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+pub type Stockpiles<'w, 's, Q, F = ()> = LUTParam<'w, 's, StockpileLut, ResourceType, Q, F>;
 
 /// Marker for village building
 #[derive(Component)]

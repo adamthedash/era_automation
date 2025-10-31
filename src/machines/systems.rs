@@ -1,3 +1,4 @@
+use crate::village::Stockpiles;
 use std::f32::consts::FRAC_PI_2;
 
 use bevy::{platform::collections::HashMap, prelude::*};
@@ -9,7 +10,7 @@ use crate::{
     player::{HeldBy, HeldItemBundle, Holding, Player, Targetted},
     resources::{ResourceMarker, ResourceNodeLUT, ResourceNodeType},
     sprites::{GetSprite, SpriteSheets},
-    village::{DepositEvent, ResourceStockpile, StockpileLut, VillageCentre},
+    village::{DepositEvent, ResourceStockpile, VillageCentre},
 };
 
 use super::components::*;
@@ -149,8 +150,7 @@ pub fn transfer_items(
     mut reader: MessageReader<TransferItem>,
     machines: Query<(EntityRef, &Machine, &AcceptsItems), With<Placed>>,
     items: Query<&ItemType>,
-    mut stockpiles: Query<&mut ResourceStockpile, (Without<ItemType>, Without<Machine>)>,
-    stockpile_lut: Res<StockpileLut>,
+    mut stockpiles: Stockpiles<&mut ResourceStockpile, (Without<ItemType>, Without<Machine>)>,
     mut commands: Commands,
 ) {
     for TransferItem {
@@ -187,10 +187,8 @@ pub fn transfer_items(
                     .resource_type()
                     .expect("Item does not provide a resource!");
 
-                let mut stockpile = stockpile_lut
-                    .0
-                    .get(&resource)
-                    .and_then(|entity| stockpiles.get_mut(*entity).ok())
+                let mut stockpile = stockpiles
+                    .get_mut(&resource)
                     .expect("Stockpile not created!");
 
                 // TODO: Different items giving different amounts of a resource

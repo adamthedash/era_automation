@@ -15,11 +15,11 @@ pub fn init_knowledge(mut commands: Commands) {
         UnlockRequirements(vec![
             UnlockRequirement::TotalDeposited {
                 resource: ResourceType::Wood,
-                amount: 5,
+                amount: 1,
             },
             UnlockRequirement::TotalDeposited {
                 resource: ResourceType::Water,
-                amount: 5,
+                amount: 1,
             },
         ]),
         Recipe {
