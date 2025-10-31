@@ -2,12 +2,12 @@ use bevy::{platform::collections::HashMap, prelude::*};
 
 use crate::{
     consts::Z_RESOURCES,
-    container::Contains,
+    container::{ContainedBundle, ContainedBy, Container, Contains},
     items::ItemType,
-    machines::{AcceptsItems, Machine, MachineLUT, Placed},
+    machines::{AcceptsItems, Machine, MachineLUT, Placed, TransferItem},
     map::TilePos,
-    player::{HeldBy, Targettable},
-    resources::{ResourceAmount, ResourceType},
+    player::{HeldBy, HeldItemBundle, Targettable, Targetted},
+    resources::ResourceType,
     sprites::{GetSprite, ResourceSprite, SpriteSheets},
 };
 
@@ -115,43 +115,47 @@ pub fn spawn_village_centre(
 
 /// Deposit a held item into the village
 pub fn deposit_resource(
+    village: Single<(Entity, &AcceptsItems), (With<VillageCentre>, With<Targetted>)>,
+    held_items: Query<(Entity, &ItemType), (With<HeldBy>, Without<Container>)>,
+    held_containers: Query<&Contains, With<HeldBy>>,
+    contained_items: Query<&ItemType, With<ContainedBy>>,
     mut commands: Commands,
-    held_items: Query<(Entity, Option<&Contains>), With<HeldBy>>,
-    items: Query<(&ItemType, &ResourceAmount)>,
-    mut stockpiles: Query<(&mut ResourceStockpile, &ResourceType)>,
+    mut writer: MessageWriter<TransferItem>,
 ) {
-    // Collate items held directly & in containers
-    let entities = held_items.iter().flat_map(|(entity, contains)| {
-        if let Some(contains) = contains {
-            contains.iter().collect()
-        } else {
-            vec![entity]
-        }
-    });
+    // Move held depositables to the void
+    let held_items = held_items
+        .iter()
+        .filter(|(_, item_type)| village.1.can_accept(item_type))
+        .map(|(item, _)| {
+            commands.entity(item).remove::<HeldItemBundle>();
+            item
+        })
+        .collect::<Vec<_>>();
 
-    for entity in entities {
-        let Ok((item_type, amount)) = items.get(entity) else {
-            continue;
-        };
+    // Move depositables from containers to the void
+    let contained_items = held_containers
+        .iter()
+        .flat_map(|children| {
+            children.iter().filter(|item| {
+                let item_type = contained_items
+                    .get(*item)
+                    .expect("Following contained relationship, so this should exist");
 
-        let Some(resource) = item_type.resource_type() else {
-            // No resource provided by this item
-            continue;
-        };
-
-        let (mut stockpile, _) = stockpiles
-            .iter_mut()
-            .find(|(_, stock_type)| **stock_type == resource)
-            .expect("Stockpile not created");
-
-        stockpile.0 += amount.0 as f32;
-
-        // Remove the item
-        commands.entity(entity).despawn();
-
-        commands.trigger(DepositEvent {
-            resource,
-            amount: amount.0,
+                village.1.can_accept(item_type)
+            })
+        })
+        .inspect(|item| {
+            commands.entity(*item).remove::<ContainedBundle>();
         });
-    }
+
+    // Trigger transfer to village
+    held_items
+        .into_iter()
+        .chain(contained_items)
+        .for_each(|item| {
+            writer.write(TransferItem {
+                item,
+                target_machine: village.0,
+            });
+        });
 }

@@ -6,7 +6,7 @@ use bevy::prelude::*;
 pub use components::*;
 use systems::*;
 
-use crate::{player::Targetted, utils::run_if::key_just_pressed};
+use crate::utils::run_if::key_just_pressed;
 
 /// Controls village resources which need to be sustained
 pub struct VillagePlugin;
@@ -20,12 +20,7 @@ impl Plugin for VillagePlugin {
                 (
                     update_resources,
                     update_resource_display,
-                    deposit_resource.run_if(key_just_pressed(KeyCode::Space).and(
-                        // Only run when targetting a village centre
-                        |village: Query<(), (With<VillageCentre>, With<Targetted>)>| {
-                            !village.is_empty()
-                        },
-                    )),
+                    deposit_resource.run_if(key_just_pressed(KeyCode::Space)),
                 ),
             );
     }
