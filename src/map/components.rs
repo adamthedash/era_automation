@@ -1,10 +1,12 @@
+use std::ops::Deref;
+
 use auto_ops::impl_op_ex;
 use bevy::{platform::collections::HashMap, prelude::*};
 
 use crate::{
     consts::{CHUNK_SIZE, TERRAIN_STARTING_RADIUS},
     sprites::TerrainSprite,
-    utils::{math::lerp_f32, noise::MyGenerator},
+    utils::{math::lerp_f32, noise::MyGenerator, query::LUTParam},
 };
 
 /// Discrete tile locations - World space
@@ -136,13 +138,26 @@ impl WorldGenerator {
 #[derive(Resource, Default)]
 pub struct ChunkLUT(pub HashMap<ChunkPos, Entity>);
 
+impl Deref for ChunkLUT {
+    type Target = HashMap<ChunkPos, Entity>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+pub type Chunks<'w, 's, Q, F = ()> = LUTParam<'w, 's, ChunkLUT, ChunkPos, Q, F>;
+
 /// Message which triggers a chunk to be created
 #[derive(Message)]
 pub struct CreateChunk(pub ChunkPos);
 
 /// Event emitted after a chunk is created
 #[derive(EntityEvent)]
-pub struct ChunkCreated(pub Entity);
+pub struct ChunkCreated {
+    pub entity: Entity,
+    pub pos: ChunkPos,
+}
 
 /// Message to recompute the height gradients for a chunk
 #[derive(Message)]

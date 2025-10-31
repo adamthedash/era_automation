@@ -1,4 +1,4 @@
-use crate::village::Stockpiles;
+use crate::{resources::ResourceNodes, village::Stockpiles};
 use std::f32::consts::FRAC_PI_2;
 
 use bevy::{platform::collections::HashMap, prelude::*};
@@ -217,10 +217,8 @@ pub fn tick_harvesters(
         ),
         With<Harvester>,
     >,
-    resource_lut: Res<ResourceNodeLUT>,
-    resources: Query<(&ResourceNodeType, &ItemType), With<ResourceMarker>>,
-    machine_lut: Res<MachineLUT>,
-    machines: Query<(Entity, &Machine, &AcceptsItems), With<Placed>>,
+    resources: ResourceNodes<(&ResourceNodeType, &ItemType), With<ResourceMarker>>,
+    machines: Machines<(Entity, &Machine, &AcceptsItems), With<Placed>>,
     timer: Res<Time>,
     sprite_sheets: Res<SpriteSheets>,
     mut commands: Commands,
@@ -230,14 +228,13 @@ pub fn tick_harvesters(
         // Check if there's a harvestable node in front of the machine
         let resource_pos = tile_pos + direction.0;
 
-        let Some(resource) = resource_lut.0.get(&resource_pos) else {
+        let Some((resource_type, item_type)) = resources.get(&resource_pos) else {
             // No resource, so reset progress
             state.0 = 0.;
             continue;
         };
 
         // Check that resource can be harvested by this machine
-        let (resource_type, item_type) = resources.get(*resource).expect("Resource node not found");
         if !harvestable_nodes.0.contains(resource_type) {
             // Can't harvest this type of node, so reset progress
             state.0 = 0.;
@@ -258,10 +255,7 @@ pub fn tick_harvesters(
             item_type.spawn_sprite(&mut commands, &sprite_sheets, Some(item));
 
             // Check if there's something beside it
-            if let Some((machine, machine_type, acceptable_items)) = machine_lut
-                .0
-                .get(&behind)
-                .and_then(|entity| machines.get(*entity).ok())
+            if let Some((machine, machine_type, acceptable_items)) = machines.get(&behind)
                 && acceptable_items.can_accept(item_type)
             {
                 info!("Transferring item Harvester -> {:?}", machine_type);
@@ -289,8 +283,7 @@ pub fn tick_transporters(
         With<TransportedBy>,
     >,
     transporters: Query<(&MachineSpeed, &Direction, &Children, &TilePos), With<Transporter>>,
-    machines: Query<(Entity, &Machine, &AcceptsItems), With<Placed>>,
-    machine_lut: Res<MachineLUT>,
+    machines: Machines<(Entity, &Machine, &AcceptsItems), With<Placed>>,
     timer: Res<Time>,
     mut commands: Commands,
     mut transfer_items: MessageWriter<TransferItem>,
@@ -314,10 +307,7 @@ pub fn tick_transporters(
             if progress >= 1. {
                 // Check if there's another transporter next to it
                 let adjacent_pos = machine_pos + direction.0;
-                if let Some((machine, machine_type, acceptable_items)) = machine_lut
-                    .0
-                    .get(&adjacent_pos)
-                    .and_then(|entity| machines.get(*entity).ok())
+                if let Some((machine, machine_type, acceptable_items)) = machines.get(&adjacent_pos)
                     && acceptable_items.can_accept(item_type)
                 {
                     info!("Transferring item Transporter -> {:?}", machine_type);
@@ -346,8 +336,7 @@ pub fn tick_pickerupper(
         (&TilePos, &mut MachineState, &MachineSpeed, &Direction),
         With<PickerUpper>,
     >,
-    machines: Query<(Entity, &Machine, &AcceptsItems), With<Placed>>,
-    machine_lut: Res<MachineLUT>,
+    machines: Machines<(Entity, &Machine, &AcceptsItems), With<Placed>>,
     ground_items: Query<(Entity, &WorldPos, &ItemType), With<GroundItem>>,
     timer: Res<Time>,
     mut commands: Commands,
@@ -388,10 +377,7 @@ pub fn tick_pickerupper(
             let behind = machine_pos + direction.0;
 
             // Check if there's something beside it
-            if let Some((machine, machine_type, acceptable_items)) = machine_lut
-                .0
-                .get(&behind)
-                .and_then(|entity| machines.get(*entity).ok())
+            if let Some((machine, machine_type, acceptable_items)) = machines.get(&behind)
                 && acceptable_items.can_accept(item_type)
             {
                 info!("Transferring item Picker-upper -> {:?}", machine_type);

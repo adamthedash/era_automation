@@ -14,7 +14,7 @@ use crate::{
 use super::components::*;
 
 /// Initialise the starting resource stockpiles
-pub fn setup_stockpiles(mut commands: Commands, mut lut: ResMut<StockpileLut>) {
+pub fn setup_stockpiles(mut commands: Commands, mut lut: ResMut<StockpileLUT>) {
     use ResourceType::*;
     for res_type in [Wood, Food, Water] {
         let entity = commands.spawn((

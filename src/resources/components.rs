@@ -1,8 +1,11 @@
+use std::ops::Deref;
+
 use bevy::{platform::collections::HashMap, prelude::*};
 
 use crate::{
     map::TilePos,
     sprites::{GetSprite, ResourceSprite, SpriteSheets},
+    utils::query::LUTParam,
 };
 
 /// The type of resource used by the village
@@ -46,6 +49,16 @@ pub struct ResourceAmount(pub usize);
 #[derive(Resource, Default)]
 pub struct ResourceNodeLUT(pub HashMap<TilePos, Entity>);
 
+impl Deref for ResourceNodeLUT {
+    type Target = HashMap<TilePos, Entity>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 /// Marker for a resource node
 #[derive(Component)]
 pub struct ResourceMarker;
+
+pub type ResourceNodes<'w, 's, Q, F = ()> = LUTParam<'w, 's, ResourceNodeLUT, TilePos, Q, F>;

@@ -48,7 +48,10 @@ pub fn create_chunks(
         ));
 
         chunk_lut.0.insert(*chunk_pos, chunk.id());
-        chunk.trigger(ChunkCreated);
+        chunk.trigger(|entity| ChunkCreated {
+            entity,
+            pos: *chunk_pos,
+        });
     }
 }
 
@@ -82,19 +85,13 @@ pub fn update_tilemap_data(
 /// Updates the gradient map for adjacent chunks
 pub fn update_gradient_map(
     event: On<ChunkCreated>,
-    chunk_data: Query<&ChunkPos>,
     chunk_lut: Res<ChunkLUT>,
     mut writer: MessageWriter<RecomputeGradient>,
 ) {
-    // Get central chunk position
-    let chunk_pos = chunk_data
-        .get(event.0)
-        .expect("Chunk has just been created, so these should exist");
-
     // Trigger gradient recalc for this and adjacent chunks
     for i in -1..=1 {
         for j in -1..=1 {
-            let chunk_pos = chunk_pos + IVec2::new(i, j);
+            let chunk_pos = event.pos + IVec2::new(i, j);
 
             if chunk_lut.0.contains_key(&chunk_pos) {
                 writer.write(RecomputeGradient(chunk_pos));
@@ -126,9 +123,8 @@ impl PaddedHeightGrid<'_> {
 /// Recomputes the height gradients for a chunk
 pub fn recompute_gradients(
     mut messages: MessageReader<RecomputeGradient>,
-    chunk_lut: Res<ChunkLUT>,
-    chunk_data: Query<(&ChunkPos, &HeightData)>,
-    mut grad_data: Query<&mut GradientData>,
+    chunk_data: Chunks<(&ChunkPos, &HeightData)>,
+    mut grad_data: Chunks<&mut GradientData>,
 ) {
     for RecomputeGradient(chunk_pos) in messages.read() {
         info!("Recomputing gradients for chunk: {:?}", chunk_pos.0);
@@ -138,21 +134,15 @@ pub fn recompute_gradients(
         for i in 0..3 {
             for j in 0..3 {
                 let chunk_pos = chunk_pos + IVec2::new(j - 1, i - 1);
-                if let Some(entity) = chunk_lut.0.get(&chunk_pos) {
-                    let (_, height_data) = chunk_data
-                        .get(*entity)
-                        .expect("Chunk entity exists, so these should exist");
-
+                if let Some((_, height_data)) = chunk_data.get(&chunk_pos) {
                     padded_height_map.0[i as usize][j as usize] = Some(height_data);
                 }
             }
         }
 
         // Get gradient data to write to for this chunk
-        let mut gradient_data = chunk_lut
-            .0
-            .get(chunk_pos)
-            .and_then(|entity| grad_data.get_mut(*entity).ok())
+        let mut gradient_data = grad_data
+            .get_mut(chunk_pos)
             .expect("Chunk has just been created, so these should exist");
 
         // Compute gradients - sobel filter

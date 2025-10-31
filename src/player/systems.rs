@@ -1,3 +1,4 @@
+use crate::map::Chunks;
 use bevy::{
     self,
     ecs::{bundle::InsertMode, system::entity_command},
@@ -12,7 +13,7 @@ use crate::{
     },
     container::{ContainableItems, ContainedBundle},
     items::ItemType,
-    map::{ChunkLUT, TerrainData, TilePos, WorldPos},
+    map::{TerrainData, TilePos, WorldPos},
     resources::{ResourceAmount, ResourceMarker, ResourceNodeType},
     sprites::{EntitySprite, GetSprite, ItemSprite, SpriteSheets, TerrainSprite},
 };
@@ -186,8 +187,7 @@ pub fn harvest_resource(
 /// Checks whether the player is in range of a water source
 pub fn check_near_water(
     player: Single<(Entity, &WorldPos), With<Player>>,
-    chunks_lut: Res<ChunkLUT>,
-    tile_data: Query<&TerrainData>,
+    tile_data: Chunks<&TerrainData>,
     mut commands: Commands,
 ) {
     let (player_entity, player_pos) = *player;
@@ -208,12 +208,7 @@ pub fn check_near_water(
             let (chunk_pos, offset) = tile_pos.to_chunk_offset();
 
             // Fetch tile data for the chunk
-            let tile_data = chunks_lut
-                .0
-                .get(&chunk_pos)
-                .and_then(|entity| tile_data.get(*entity).ok());
-
-            tile_data.map(|td| (offset, td))
+            tile_data.get(&chunk_pos).map(|td| (offset, td))
         })
         // Check if any are water tiles
         .any(|(offset, tile_data)| {

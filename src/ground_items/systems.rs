@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use crate::{
     consts::{GROUND_ITEM_BOB_HEIGHT, ITEM_ROLL_SPEED, ROLL_FRICTION},
     items::ItemType,
-    map::{ChunkLUT, GradientData, WorldPos},
+    map::{Chunks, GradientData, WorldPos},
     player::{HeldItemBundle, Holding, Player, Targetted},
 };
 
@@ -74,22 +74,16 @@ pub fn pickup_item(
 /// Roll items according to the terrain gradient
 pub fn roll_items(
     items: Query<(Entity, &ItemType, &mut WorldPos), With<GroundItem>>,
-    chunk_lut: Res<ChunkLUT>,
-    gradients: Query<&GradientData>,
+    gradients: Chunks<&GradientData>,
     timer: Res<Time>,
     mut commands: Commands,
 ) {
     for (item, item_type, mut item_pos) in items {
         let (chunk_pos, offset) = item_pos.tile().to_chunk_offset();
 
-        let chunk = chunk_lut
-            .0
+        let gradients = gradients
             .get(&chunk_pos)
             .expect("Chunk should already be generated if there's an item on the ground");
-
-        let gradients = gradients
-            .get(*chunk)
-            .expect("Gradient data should already be available if chunk is created");
 
         let tile_gradient = gradients.0[offset.y as usize][offset.x as usize];
 

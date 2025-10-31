@@ -12,7 +12,7 @@ use crate::utils::run_if::key_just_pressed;
 pub struct VillagePlugin;
 impl Plugin for VillagePlugin {
     fn build(&self, app: &mut bevy::app::App) {
-        app.init_resource::<StockpileLut>()
+        app.init_resource::<StockpileLUT>()
             .add_systems(Startup, (setup_stockpiles, setup_resource_display).chain())
             .add_systems(Startup, spawn_village_centre)
             .add_systems(

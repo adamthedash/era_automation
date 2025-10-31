@@ -19,9 +19,9 @@ pub struct ResourceName(pub String);
 
 /// Lookup table for stockpile entities
 #[derive(Resource, Default)]
-pub struct StockpileLut(pub HashMap<ResourceType, Entity>);
+pub struct StockpileLUT(pub HashMap<ResourceType, Entity>);
 
-impl Deref for StockpileLut {
+impl Deref for StockpileLUT {
     type Target = HashMap<ResourceType, Entity>;
 
     fn deref(&self) -> &Self::Target {
@@ -29,7 +29,7 @@ impl Deref for StockpileLut {
     }
 }
 
-pub type Stockpiles<'w, 's, Q, F = ()> = LUTParam<'w, 's, StockpileLut, ResourceType, Q, F>;
+pub type Stockpiles<'w, 's, Q, F = ()> = LUTParam<'w, 's, StockpileLUT, ResourceType, Q, F>;
 
 /// Marker for village building
 #[derive(Component)]

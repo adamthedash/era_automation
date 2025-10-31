@@ -2,6 +2,7 @@ use bevy::{
     platform::collections::{HashMap, HashSet},
     prelude::*,
 };
+use std::ops::Deref;
 
 use crate::{
     consts::{Z_RESOURCES, Z_TRANSPORTED_ITEM},
@@ -10,6 +11,7 @@ use crate::{
     player::Targettable,
     resources::ResourceNodeType,
     sprites::EntitySprite,
+    utils::query::LUTParam,
 };
 
 /// Marker for machines, also machine type
@@ -86,6 +88,16 @@ pub struct MachineState(pub f32);
 
 #[derive(Resource, Default)]
 pub struct MachineLUT(pub HashMap<TilePos, Entity>);
+
+impl Deref for MachineLUT {
+    type Target = HashMap<TilePos, Entity>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+pub type Machines<'w, 's, Q, F> = LUTParam<'w, 's, MachineLUT, TilePos, Q, F>;
 
 /// Sprites which are cycled through depending on the progress of the machine
 #[derive(Component)]
