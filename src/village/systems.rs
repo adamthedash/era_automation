@@ -103,7 +103,7 @@ pub fn spawn_village_centre(
             VillageCentre,
             Targettable,
             Machine::VillageCentre,
-            AcceptsItems,
+            AcceptsItems::Whitelist(vec![ItemType::Berry, ItemType::Log, ItemType::Water]),
             Placed,
         ))
         .id();

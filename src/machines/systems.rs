@@ -7,9 +7,9 @@ use crate::{
     items::ItemType,
     map::{TilePos, WorldPos},
     player::{HeldBy, HeldItemBundle, Holding, Player, Targetted},
-    resources::{ResourceAmount, ResourceMarker, ResourceNodeLUT, ResourceNodeType, ResourceType},
+    resources::{ResourceAmount, ResourceMarker, ResourceNodeLUT, ResourceNodeType},
     sprites::{GetSprite, SpriteSheets},
-    village::{ResourceStockpile, VillageCentre},
+    village::{DepositEvent, ResourceStockpile, StockpileLut, VillageCentre},
 };
 
 use super::components::*;
@@ -147,9 +147,11 @@ pub fn rotate_machine(
 /// Transfer items from the ether into machines
 pub fn transfer_items(
     mut reader: MessageReader<TransferItem>,
-    machines: Query<(EntityRef, &Machine), (With<Placed>, With<AcceptsItems>)>,
-    items: Query<(&ItemType, &ResourceAmount)>,
-    mut stockpiles: Query<(&mut ResourceStockpile, &ResourceType)>,
+    machines: Query<(EntityRef, &Machine, &AcceptsItems), With<Placed>>,
+    items: Query<&ItemType>,
+    resource_items: Query<(&ItemType, &ResourceAmount)>,
+    mut stockpiles: Query<&mut ResourceStockpile, (Without<ItemType>, Without<Machine>)>,
+    stockpile_lut: Res<StockpileLut>,
     mut commands: Commands,
 ) {
     for TransferItem {
@@ -158,13 +160,16 @@ pub fn transfer_items(
     } in reader.read()
     {
         // Get target machine
-        let (machine, machine_type) = machines
+        let (machine, machine_type, accceptable_items) = machines
             .get(*target_machine)
             .expect("Target machine does not exist!");
 
+        // Verify that this transfer can happen (this should already be checked before the transfer
+        // request, so this is a sanity check)
+        let item_type = items.get(*item).expect("Item doesn't exist!");
         assert!(
-            machine.contains::<AcceptsItems>(),
-            "Machine cannot accept items"
+            accceptable_items.can_accept(item_type),
+            "Machine cannot accept this item"
         );
 
         use Machine::*;
@@ -179,7 +184,29 @@ pub fn transfer_items(
                     .insert(TransportedItemBundle::new(machine.id(), direction));
             }
             VillageCentre => {
-                todo!()
+                let (item_type, amount) = resource_items
+                    .get(*item)
+                    .expect("Item does not provide a resource!");
+
+                let resource = item_type
+                    .resource_type()
+                    .expect("Item does not provide a resource!");
+
+                let mut stockpile = stockpile_lut
+                    .0
+                    .get(&resource)
+                    .and_then(|entity| stockpiles.get_mut(*entity).ok())
+                    .expect("Stockpile not created!");
+
+                stockpile.0 += amount.0 as f32;
+
+                // Remove the item
+                commands.entity(*item).despawn();
+
+                commands.trigger(DepositEvent {
+                    resource,
+                    amount: amount.0,
+                });
             }
             _ => unreachable!("Machine accepts items but logic not here!"),
         };
@@ -201,7 +228,7 @@ pub fn tick_harvesters(
     resource_lut: Res<ResourceNodeLUT>,
     resources: Query<(&ResourceNodeType, &ItemType), With<ResourceMarker>>,
     machine_lut: Res<MachineLUT>,
-    machines: Query<(Entity, &Machine), (With<AcceptsItems>, With<Placed>)>,
+    machines: Query<(Entity, &Machine, &AcceptsItems), With<Placed>>,
     timer: Res<Time>,
     sprite_sheets: Res<SpriteSheets>,
     mut commands: Commands,
@@ -245,10 +272,11 @@ pub fn tick_harvesters(
             item_type.spawn_sprite(&mut commands, &sprite_sheets, Some(item));
 
             // Check if there's something beside it
-            if let Some((machine, machine_type)) = machine_lut
+            if let Some((machine, machine_type, acceptable_items)) = machine_lut
                 .0
                 .get(&behind)
                 .and_then(|entity| machines.get(*entity).ok())
+                && acceptable_items.can_accept(item_type)
             {
                 info!("Transferring item Harvester -> {:?}", machine_type);
 
@@ -270,9 +298,12 @@ pub fn tick_harvesters(
 
 /// Move items along the transporter
 pub fn tick_transporters(
-    mut transported_items: Query<(Entity, &mut Transform, &mut MachineState), With<TransportedBy>>,
+    mut transported_items: Query<
+        (Entity, &mut Transform, &mut MachineState, &ItemType),
+        With<TransportedBy>,
+    >,
     transporters: Query<(&MachineSpeed, &Direction, &Children, &TilePos), With<Transporter>>,
-    machines: Query<(Entity, &Machine), (With<AcceptsItems>, With<Placed>)>,
+    machines: Query<(Entity, &Machine, &AcceptsItems), With<Placed>>,
     machine_lut: Res<MachineLUT>,
     timer: Res<Time>,
     mut commands: Commands,
@@ -280,7 +311,8 @@ pub fn tick_transporters(
 ) {
     for (speed, direction, children, machine_pos) in transporters {
         for child in children {
-            let Ok((item, mut transform, mut state)) = transported_items.get_mut(*child) else {
+            let Ok((item, mut transform, mut state, item_type)) = transported_items.get_mut(*child)
+            else {
                 // Non-item child
                 continue;
             };
@@ -296,10 +328,11 @@ pub fn tick_transporters(
             if progress >= 1. {
                 // Check if there's another transporter next to it
                 let adjacent_pos = machine_pos + direction.0;
-                if let Some((machine, machine_type)) = machine_lut
+                if let Some((machine, machine_type, acceptable_items)) = machine_lut
                     .0
                     .get(&adjacent_pos)
                     .and_then(|entity| machines.get(*entity).ok())
+                    && acceptable_items.can_accept(item_type)
                 {
                     info!("Transferring item Transporter -> {:?}", machine_type);
 
@@ -327,9 +360,9 @@ pub fn tick_pickerupper(
         (&TilePos, &mut MachineState, &MachineSpeed, &Direction),
         With<PickerUpper>,
     >,
-    machines: Query<(Entity, &Machine), (With<AcceptsItems>, With<Placed>)>,
+    machines: Query<(Entity, &Machine, &AcceptsItems), With<Placed>>,
     machine_lut: Res<MachineLUT>,
-    ground_items: Query<(Entity, &WorldPos), With<GroundItem>>,
+    ground_items: Query<(Entity, &WorldPos, &ItemType), With<GroundItem>>,
     timer: Res<Time>,
     mut commands: Commands,
     mut transfer_items: MessageWriter<TransferItem>,
@@ -338,11 +371,11 @@ pub fn tick_pickerupper(
     // TODO: replace this with some spatial query data structure stored as a resource
     let ground_items = ground_items.iter().fold(
         HashMap::<_, Vec<_>>::new(),
-        |mut hm, (entity, world_pos)| {
+        |mut hm, (entity, world_pos, item_type)| {
             // NOTE: +0.5 so we search centre of tile instead of origin corner
             hm.entry((world_pos + Vec2::splat(0.5)).tile())
                 .or_default()
-                .push(entity);
+                .push((entity, item_type));
 
             hm
         },
@@ -361,7 +394,7 @@ pub fn tick_pickerupper(
             state.0 -= speed.0;
 
             // Pick up an item
-            let item = *items
+            let (item, item_type) = *items
                 .first()
                 .expect("If hashmap has entry, there should be at least 1 item");
             commands.entity(item).remove::<GroundItemBundle>();
@@ -369,10 +402,11 @@ pub fn tick_pickerupper(
             let behind = machine_pos + direction.0;
 
             // Check if there's something beside it
-            if let Some((machine, machine_type)) = machine_lut
+            if let Some((machine, machine_type, acceptable_items)) = machine_lut
                 .0
                 .get(&behind)
                 .and_then(|entity| machines.get(*entity).ok())
+                && acceptable_items.can_accept(item_type)
             {
                 info!("Transferring item Picker-upper -> {:?}", machine_type);
 

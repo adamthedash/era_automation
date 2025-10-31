@@ -5,6 +5,7 @@ use bevy::{
 
 use crate::{
     consts::{Z_RESOURCES, Z_TRANSPORTED_ITEM},
+    items::ItemType,
     map::TilePos,
     player::Targettable,
     resources::ResourceNodeType,
@@ -53,35 +54,23 @@ impl Machine {
             VillageCentre => unreachable!("Village centre cannot be placed"),
         }
     }
-
-    /// Give an item to this machine. Assumes the item has already been removed from where it was
-    /// before and is in a "limbo" state
-    pub fn give_item(&self, item: &mut EntityCommands, machine: &EntityRef) {
-        assert!(
-            machine.contains::<AcceptsItems>(),
-            "Machine cannot accept items"
-        );
-
-        use Machine::*;
-        match self {
-            Transporter => {
-                let direction = machine
-                    .get::<Direction>()
-                    .expect("Machine does not have a direction!");
-
-                item.insert(TransportedItemBundle::new(machine.id(), direction));
-            }
-            VillageCentre => {
-                //
-            }
-            _ => unreachable!("Machine accepts items but logic not here!"),
-        }
-    }
 }
 
 /// Marker for a machine that can have items given to it
 #[derive(Component)]
-pub struct AcceptsItems;
+pub enum AcceptsItems {
+    Any,
+    Whitelist(Vec<ItemType>),
+}
+impl AcceptsItems {
+    pub fn can_accept(&self, item: &ItemType) -> bool {
+        use AcceptsItems::*;
+        match self {
+            Any => true,
+            Whitelist(item_types) => item_types.contains(item),
+        }
+    }
+}
 
 /// The direction the machine is facing towards
 #[derive(Component)]
@@ -205,7 +194,7 @@ impl TransporterBundle {
             transporter_marker: Transporter,
             speed: MachineSpeed(speed),
             animation_sprites: AnimationSprites(sprites),
-            accepts_items: AcceptsItems,
+            accepts_items: AcceptsItems::Any,
         }
     }
 }
