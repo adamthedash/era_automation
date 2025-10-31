@@ -2,9 +2,9 @@ use bevy::{platform::collections::HashSet, prelude::*};
 
 use crate::{
     container::{ContainableItems, Container},
-    machines::{HarvesterBundle, PickerUpperBundle, TransporterBundle},
+    machines::{HarvesterBundle, PickerUpperBundle, TransporterBundle, WaterWheelBundle},
     resources::{ResourceNodeType, ResourceType},
-    sprites::{EntitySprite, GetSprite, ItemSprite, SpriteSheets},
+    sprites::{EntitySprite, GetSprite, ItemSprite, SpriteSheets, TerrainSprite},
 };
 
 /// Items that can be held / moved around
@@ -14,10 +14,11 @@ pub enum ItemType {
     Log,
     Water,
     Bowl,
-    Harvester,
+    BushWhacker,
     Transporter,
     PickerUpper,
     TripAxe,
+    WaterWheel,
 }
 
 impl ItemType {
@@ -28,10 +29,11 @@ impl ItemType {
             Log => ItemSprite::Log,
             Water => ItemSprite::Water,
             Bowl => ItemSprite::Bowl,
-            Harvester => ItemSprite::Harvester,
+            BushWhacker => ItemSprite::BushWhacker,
             Transporter => ItemSprite::Transporter,
             PickerUpper => ItemSprite::PickerUpper,
             TripAxe => ItemSprite::TripAxe,
+            WaterWheel => ItemSprite::WaterWheel,
         }
     }
 
@@ -43,10 +45,11 @@ impl ItemType {
             Log => Some(ResourceType::Wood),
             Water => Some(ResourceType::Water),
             Bowl => None,
-            Harvester => None,
+            BushWhacker => None,
             Transporter => None,
             PickerUpper => None,
             TripAxe => None,
+            WaterWheel => None,
         }
     }
 
@@ -64,11 +67,11 @@ impl ItemType {
                     }),
                 ));
             }
-            Harvester => {
+            BushWhacker => {
                 commands.insert(HarvesterBundle::new(
                     2.,
                     [ResourceNodeType::Bush],
-                    vec![EntitySprite::Harvester1, EntitySprite::Harvester2],
+                    vec![EntitySprite::BushWhacker1, EntitySprite::BushWhacker2],
                 ));
             }
             Transporter => {
@@ -82,6 +85,13 @@ impl ItemType {
                     2.,
                     [ResourceNodeType::Tree],
                     vec![EntitySprite::TripAxe1, EntitySprite::TripAxe2],
+                ));
+            }
+            WaterWheel => {
+                commands.insert(WaterWheelBundle::new(
+                    2.,
+                    [TerrainSprite::Water],
+                    vec![EntitySprite::WaterWheel1, EntitySprite::WaterWheel2],
                 ));
             }
             _ => (),

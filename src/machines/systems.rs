@@ -1,4 +1,8 @@
-use crate::{resources::ResourceNodes, village::Stockpiles};
+use crate::{
+    map::{Chunks, TerrainData},
+    resources::ResourceNodes,
+    village::Stockpiles,
+};
 use std::f32::consts::FRAC_PI_2;
 
 use bevy::{platform::collections::HashMap, prelude::*};
@@ -206,7 +210,7 @@ pub fn transfer_items(
 }
 
 /// Advance the state of the harvesters if there is a resource beside it
-pub fn tick_harvesters(
+pub fn tick_resource_harvesters(
     harvesters: Query<
         (
             &TilePos,
@@ -245,33 +249,112 @@ pub fn tick_harvesters(
         state.0 += timer.delta_secs();
 
         // Check if harvest has been completed
-        if state.0 >= speed.0 {
-            state.0 -= speed.0;
+        if state.0 < speed.0 {
+            // Not done yet
+            continue;
+        }
+        state.0 -= speed.0;
 
-            let behind = tile_pos - direction.0;
+        // Spawn an item
+        let output_pos = tile_pos - direction.0;
+        let item = commands.spawn(*item_type).id();
+        item_type.spawn_sprite(&mut commands, &sprite_sheets, Some(item));
 
-            // Spawn an item
-            let item = commands.spawn(*item_type).id();
-            item_type.spawn_sprite(&mut commands, &sprite_sheets, Some(item));
+        // Check if there's something beside it
+        if let Some((machine, machine_type, acceptable_items)) = machines.get(&output_pos)
+            && acceptable_items.can_accept(item_type)
+        {
+            info!("Transferring item Harvester -> {:?}", machine_type);
 
-            // Check if there's something beside it
-            if let Some((machine, machine_type, acceptable_items)) = machines.get(&behind)
-                && acceptable_items.can_accept(item_type)
-            {
-                info!("Transferring item Harvester -> {:?}", machine_type);
+            // Request to transfer to the target machine
+            transfer_items.write(TransferItem {
+                item,
+                target_machine: machine,
+            });
+        } else {
+            info!("Transferring item Harvester -> ground");
+            // Drop item on ground
+            commands
+                .entity(item)
+                .insert(GroundItemBundle::new(&output_pos.as_world_pos()));
+        }
+    }
+}
 
-                // Request to transfer to the target machine
-                transfer_items.write(TransferItem {
-                    item,
-                    target_machine: machine,
-                });
-            } else {
-                info!("Transferring item Harvester -> ground");
-                // Drop item on ground
-                commands
-                    .entity(item)
-                    .insert(GroundItemBundle::new(&behind.as_world_pos()));
-            }
+/// Advance the state of the terrain harvesters
+pub fn tick_terrain_harvesters(
+    harvesters: Query<
+        (
+            &TilePos,
+            &mut MachineState,
+            &MachineSpeed,
+            &Direction,
+            &HarvestableTerrain,
+        ),
+        With<Harvester>,
+    >,
+    chunks: Chunks<&TerrainData>,
+    machines: Machines<(Entity, &Machine, &AcceptsItems), With<Placed>>,
+    timer: Res<Time>,
+    sprite_sheets: Res<SpriteSheets>,
+    mut commands: Commands,
+    mut transfer_items: MessageWriter<TransferItem>,
+) {
+    for (tile_pos, mut state, speed, direction, harvestable_terrain) in harvesters {
+        // Check if there's a harvestable node under of the machine
+        let resource_pos = tile_pos + direction.0;
+
+        // Get terrain under the machine
+        let (chunk_pos, offset) = resource_pos.to_chunk_offset();
+        let terrain_data = chunks.get(&chunk_pos).expect("Chunk data not generated");
+        let terrain_type = &terrain_data.0[offset.y as usize][offset.x as usize];
+
+        // Check that resource can be harvested by this machine
+        if !harvestable_terrain.0.contains(terrain_type) {
+            // Can't harvest this type of node, so reset progress
+            state.0 = 0.;
+            continue;
+        }
+
+        // Check that the terrain can produce something
+        let Some(item_type) = terrain_type.item_type() else {
+            // No item given
+            state.0 = 0.;
+            continue;
+        };
+
+        // Tick the machine
+        state.0 += timer.delta_secs();
+
+        // Check if harvest has been completed
+        if state.0 < speed.0 {
+            // Not done yet
+            continue;
+        }
+        state.0 -= speed.0;
+
+        // Spawn an item
+        let output_pos = tile_pos + direction.0;
+        let item = commands.spawn(item_type).id();
+        item_type.spawn_sprite(&mut commands, &sprite_sheets, Some(item));
+
+        // Check if there's something beside it
+        if let Some((machine, machine_type, acceptable_items)) = machines.get(&output_pos)
+            && acceptable_items.can_accept(&item_type)
+        {
+            info!("Transferring item Harvester -> {:?}", machine_type);
+
+            // Request to transfer to the target machine
+            transfer_items.write(TransferItem {
+                item,
+                target_machine: machine,
+            });
+        } else {
+            info!("Transferring item Harvester -> ground");
+            // Drop item on ground
+            commands
+                .entity(item)
+                .insert(GroundItemBundle::new(&output_pos.as_world_pos()));
         }
     }
 }

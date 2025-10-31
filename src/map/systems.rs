@@ -30,7 +30,7 @@ pub fn create_chunks(
                 // +0.5 chunks so TileMapChunk is rendered from its origin
                 // -0.5 tiles so resource sprites are aligned properly
                 ((chunk_pos.0.as_vec2() + Vec2::splat(0.5)) * CHUNK_SIZE.as_vec2()
-                    - Vec2::splat(0.5))
+                    - Vec2::new(1.5, 0.5))
                 .extend(0.),
             ),
             Visibility::default(),

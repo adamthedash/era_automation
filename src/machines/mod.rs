@@ -15,7 +15,12 @@ impl Plugin for MachinePlugin {
             .add_systems(
                 FixedUpdate,
                 (
-                    (tick_harvesters, tick_transporters, tick_pickerupper),
+                    (
+                        tick_resource_harvesters,
+                        tick_terrain_harvesters,
+                        tick_transporters,
+                        tick_pickerupper,
+                    ),
                     transfer_items,
                 )
                     .chain(),

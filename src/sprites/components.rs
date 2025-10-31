@@ -1,8 +1,8 @@
-use crate::consts::TILE_RAW_SIZE;
+use crate::{consts::TILE_RAW_SIZE, items::ItemType};
 use bevy::prelude::*;
 
 /// Indexes into terrain_sprites.png
-#[derive(Component, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Component, Clone, Copy, PartialEq, Eq, Default, Hash, Debug)]
 #[repr(usize)]
 pub enum TerrainSprite {
     #[default]
@@ -11,6 +11,19 @@ pub enum TerrainSprite {
     Dirt,
     Rock,
     Snow,
+}
+
+impl TerrainSprite {
+    pub fn item_type(&self) -> Option<ItemType> {
+        use TerrainSprite::*;
+        match self {
+            Grass => None,
+            Water => Some(ItemType::Water),
+            Dirt => None,
+            Rock => None,
+            Snow => None,
+        }
+    }
 }
 
 /// Indexes into resource_sprites.png
@@ -28,12 +41,14 @@ pub enum ResourceSprite {
 #[repr(usize)]
 pub enum EntitySprite {
     Player,
-    Harvester1,
-    Harvester2,
+    BushWhacker1,
+    BushWhacker2,
     Transporter,
     PickerUpper,
     TripAxe1,
     TripAxe2,
+    WaterWheel1,
+    WaterWheel2,
 }
 
 /// Indexes into item_sheet.png
@@ -44,10 +59,11 @@ pub enum ItemSprite {
     Log,
     Water,
     Bowl,
-    Harvester,
+    BushWhacker,
     Transporter,
     PickerUpper,
     TripAxe,
+    WaterWheel,
 }
 
 /// Holds a spritesheet image & layout info

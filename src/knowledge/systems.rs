@@ -41,7 +41,7 @@ pub fn init_knowledge(mut commands: Commands) {
         ]),
         Recipe {
             reqs: vec![(ResourceType::Wood, 5)],
-            product: ItemType::Harvester,
+            product: ItemType::BushWhacker,
         },
     ));
     commands.spawn((
@@ -78,6 +78,23 @@ pub fn init_knowledge(mut commands: Commands) {
         Recipe {
             reqs: vec![(ResourceType::Wood, 5)],
             product: ItemType::TripAxe,
+        },
+    ));
+    commands.spawn((
+        UnlockName("Water Wheel".to_string()),
+        UnlockRequirements(vec![
+            UnlockRequirement::TotalDeposited {
+                resource: ResourceType::Wood,
+                amount: 0,
+            },
+            UnlockRequirement::TotalDeposited {
+                resource: ResourceType::Food,
+                amount: 0,
+            },
+        ]),
+        Recipe {
+            reqs: vec![(ResourceType::Wood, 5)],
+            product: ItemType::WaterWheel,
         },
     ));
     commands.spawn((

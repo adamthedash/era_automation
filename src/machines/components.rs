@@ -10,7 +10,7 @@ use crate::{
     map::TilePos,
     player::Targettable,
     resources::ResourceNodeType,
-    sprites::EntitySprite,
+    sprites::{EntitySprite, TerrainSprite},
     utils::query::LUTParam,
 };
 
@@ -114,6 +114,10 @@ pub struct Harvester;
 /// Types of resources this machine can harvest
 #[derive(Component)]
 pub struct HarvestableNodes(pub HashSet<ResourceNodeType>);
+
+/// Types of terrain this machine can harvest
+#[derive(Component)]
+pub struct HarvestableTerrain(pub HashSet<TerrainSprite>);
 
 /// Marker for machines which transport from one tile to the next
 #[derive(Component)]
@@ -291,6 +295,30 @@ impl PlacedPickerUpperBundle {
             placed: Placed,
             targettable: Targettable,
             pickup_state: MachineState(0.),
+        }
+    }
+}
+
+#[derive(Bundle)]
+pub struct WaterWheelBundle {
+    machine_marker: Machine,
+    animation_sprites: AnimationSprites,
+    harvester_marker: Harvester,
+    harvestable_terrain: HarvestableTerrain,
+    speed: MachineSpeed,
+}
+impl WaterWheelBundle {
+    pub fn new(
+        speed: f32,
+        harvestable_terrain: impl IntoIterator<Item = TerrainSprite>,
+        sprites: Vec<EntitySprite>,
+    ) -> Self {
+        Self {
+            machine_marker: Machine::Harvester,
+            animation_sprites: AnimationSprites(sprites),
+            harvester_marker: Harvester,
+            harvestable_terrain: HarvestableTerrain(HashSet::from_iter(harvestable_terrain)),
+            speed: MachineSpeed(speed),
         }
     }
 }
