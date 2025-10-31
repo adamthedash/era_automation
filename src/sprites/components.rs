@@ -31,6 +31,9 @@ pub enum EntitySprite {
     Harvester1,
     Harvester2,
     Transporter,
+    PickerUpper,
+    TripAxe1,
+    TripAxe2,
 }
 
 /// Indexes into item_sheet.png
@@ -44,6 +47,7 @@ pub enum ItemSprite {
     Harvester,
     Transporter,
     PickerUpper,
+    TripAxe,
 }
 
 /// Holds a spritesheet image & layout info

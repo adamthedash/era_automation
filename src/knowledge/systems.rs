@@ -64,6 +64,23 @@ pub fn init_knowledge(mut commands: Commands) {
         },
     ));
     commands.spawn((
+        UnlockName("Trip Axe".to_string()),
+        UnlockRequirements(vec![
+            UnlockRequirement::TotalDeposited {
+                resource: ResourceType::Wood,
+                amount: 0,
+            },
+            UnlockRequirement::TotalDeposited {
+                resource: ResourceType::Food,
+                amount: 0,
+            },
+        ]),
+        Recipe {
+            reqs: vec![(ResourceType::Wood, 5)],
+            product: ItemType::TripAxe,
+        },
+    ));
+    commands.spawn((
         UnlockName("Plant Watering".to_string()),
         UnlockRequirements(vec![
             UnlockRequirement::TotalDeposited {

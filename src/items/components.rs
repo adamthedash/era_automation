@@ -17,6 +17,7 @@ pub enum ItemType {
     Harvester,
     Transporter,
     PickerUpper,
+    TripAxe,
 }
 
 impl ItemType {
@@ -30,6 +31,7 @@ impl ItemType {
             Harvester => ItemSprite::Harvester,
             Transporter => ItemSprite::Transporter,
             PickerUpper => ItemSprite::PickerUpper,
+            TripAxe => ItemSprite::TripAxe,
         }
     }
 
@@ -44,6 +46,7 @@ impl ItemType {
             Harvester => None,
             Transporter => None,
             PickerUpper => None,
+            TripAxe => None,
         }
     }
 
@@ -72,7 +75,14 @@ impl ItemType {
                 commands.insert(TransporterBundle::new(2., vec![EntitySprite::Transporter]));
             }
             PickerUpper => {
-                commands.insert(PickerUpperBundle::new(2., vec![EntitySprite::Transporter]));
+                commands.insert(PickerUpperBundle::new(2., vec![EntitySprite::PickerUpper]));
+            }
+            TripAxe => {
+                commands.insert(HarvesterBundle::new(
+                    2.,
+                    [ResourceNodeType::Tree],
+                    vec![EntitySprite::TripAxe1, EntitySprite::TripAxe2],
+                ));
             }
             _ => (),
         }
