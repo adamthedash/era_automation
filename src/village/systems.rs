@@ -115,52 +115,51 @@ pub fn spawn_village_centre(
 
 /// Deposit a held item into the village
 pub fn deposit_resource(
-    village: Single<(Entity, &AcceptsItems, &TargettedBy), With<VillageCentre>>,
+    villages: Query<(Entity, &AcceptsItems, &TargettedBy), With<VillageCentre>>,
     held_items: Query<(Entity, &ItemType, &HeldBy), Without<Container>>,
     held_containers: Query<(&Contains, &HeldBy)>,
     contained_items: Query<&ItemType, With<ContainedBy>>,
     mut commands: Commands,
     mut writer: MessageWriter<TransferItem>,
 ) {
-    // Only deposit items held by the entity that is targeting the village centre
-    let (village_entity, accepts, targetted_by) = *village;
-    let targetter = targetted_by.0;
+    // For each village centre, deposit items held by the entity that is targeting that centre
+    for (village_entity, accepts, targetted_by) in villages.iter() {
+        let targetter = targetted_by.0;
 
-    // Move held depositables to the void (only those held by the targetter)
-    let held_items = held_items
-        .iter()
-        .filter(|(_, item_type, held_by)| held_by.0 == targetter && accepts.can_accept(item_type))
-        .map(|(item, _, _)| {
-            commands.entity(item).remove::<HeldItemBundle>();
-            item
-        })
-        .collect::<Vec<_>>();
-
-    // Move depositables from containers held by the targetter to the void
-    let contained_items = held_containers
-        .iter()
-        .filter(|(_, held_by)| held_by.0 == targetter)
-        .flat_map(|(children, _)| {
-            children.iter().filter(|item| {
-                let item_type = contained_items
-                    .get(*item)
-                    .expect("Following contained relationship, so this should exist");
-
-                accepts.can_accept(item_type)
+        // Move held depositables to the void (only those held by the targetter)
+        let held = held_items
+            .iter()
+            .filter_map(|(item, item_type, held_by)| {
+                (held_by.0 == targetter && accepts.can_accept(item_type)).then_some(item)
             })
-        })
-        .inspect(|item| {
-            commands.entity(*item).remove::<ContainedBundle>();
-        });
+            .inspect(|item| {
+                commands.entity(*item).remove::<HeldItemBundle>();
+            })
+            .collect::<Vec<_>>();
 
-    // Trigger transfer to village
-    held_items
-        .into_iter()
-        .chain(contained_items)
-        .for_each(|item| {
+        // Move depositables from containers held by the targetter to the void
+        let contained = held_containers
+            .iter()
+            .filter(|(_, held_by)| held_by.0 == targetter)
+            .flat_map(|(children, _)| {
+                children.iter().filter(|item| {
+                    let item_type = contained_items
+                        .get(*item)
+                        .expect("Following contained relationship, so this should exist");
+
+                    accepts.can_accept(item_type)
+                })
+            })
+            .inspect(|item| {
+                commands.entity(*item).remove::<ContainedBundle>();
+            });
+
+        // Trigger transfer to village
+        held.into_iter().chain(contained).for_each(|item| {
             writer.write(TransferItem {
                 item,
                 target_machine: village_entity,
             });
         });
+    }
 }
