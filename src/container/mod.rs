@@ -6,7 +6,7 @@ use bevy::prelude::*;
 pub use components::*;
 use systems::*;
 
-use crate::{player::Targetted, utils::run_if::key_just_pressed};
+use crate::{player::TargettedBy, utils::run_if::key_just_pressed};
 
 pub struct ContainerPlugin;
 impl Plugin for ContainerPlugin {
@@ -17,7 +17,7 @@ impl Plugin for ContainerPlugin {
                 contain_item,
                 uncontain_item
                     // Target takes precedence
-                    .run_if(|targets: Query<(), With<Targetted>>| targets.is_empty()),
+                    .run_if(|targets: Query<(), With<TargettedBy>>| targets.is_empty()),
             )
                 .run_if(key_just_pressed(KeyCode::KeyC)),
         );

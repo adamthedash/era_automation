@@ -5,12 +5,12 @@ use crate::{
     ground_items::{GroundItem, GroundItemBundle},
     items::ItemType,
     map::WorldPos,
-    player::{HeldBy, Player, Targetted},
+    player::{HeldBy, Player, TargettedBy},
 };
 
 /// Pick up a ground item and put it into the container
 pub fn contain_item(
-    item: Single<(Entity, &ItemType), (With<GroundItem>, With<Targetted>)>,
+    item: Single<(Entity, &ItemType), (With<GroundItem>, With<TargettedBy>)>,
     container: Single<(Entity, &ContainableItems), (With<Container>, With<HeldBy>)>,
     mut commands: Commands,
 ) {

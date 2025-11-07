@@ -10,10 +10,15 @@ pub struct Player;
 #[derive(Component)]
 pub struct Targettable;
 
-/// Marker for when an item is targetted
-/// TODO: Move to a Targetting/TargettedBy relationship
+/// Relationship for when an entity is being targeted by something
 #[derive(Component)]
-pub struct Targetted;
+#[relationship(relationship_target = Targetting)]
+pub struct TargettedBy(pub Entity);
+
+/// Relationship for when an entity is targeting one or more things
+#[derive(Component, Debug)]
+#[relationship_target(relationship = TargettedBy)]
+pub struct Targetting(Vec<Entity>);
 
 /// Relationship for when something is being held
 #[derive(Component)]

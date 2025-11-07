@@ -22,7 +22,7 @@ impl Plugin for PlayerPlugin {
                     harvest_water.run_if(
                         key_just_pressed(KeyCode::Space)
                             // Targets take precedence
-                            .and(|targets: Query<(), With<Targetted>>| targets.is_empty()),
+                            .and(|targets: Query<(), With<TargettedBy>>| targets.is_empty()),
                     ),
                 ),
             )

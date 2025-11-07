@@ -7,7 +7,7 @@ use crate::{
     consts::{GROUND_ITEM_BOB_HEIGHT, ITEM_ROLL_SPEED, ROLL_FRICTION},
     items::ItemType,
     map::{Chunks, GradientData, WorldPos},
-    player::{HeldItemBundle, Holding, Player, Targetted},
+    player::{HeldItemBundle, Holding, Player, TargettedBy},
 };
 
 /// Bob the items up & down
@@ -58,7 +58,7 @@ pub fn drop_item(player: Single<(&WorldPos, &Holding), With<Player>>, mut comman
 
 /// Pick up a nearby item from the ground
 pub fn pickup_item(
-    ground_item: Single<Entity, (With<GroundItem>, With<Targetted>)>,
+    ground_item: Single<Entity, (With<GroundItem>, With<TargettedBy>)>,
     player: Single<(Entity, &Transform), With<Player>>,
     mut commands: Commands,
 ) {

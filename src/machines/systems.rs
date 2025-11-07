@@ -11,7 +11,7 @@ use crate::{
     ground_items::{GroundItem, GroundItemBundle},
     items::ItemType,
     map::{TilePos, WorldPos},
-    player::{HeldBy, HeldItemBundle, Holding, Player, Targetted},
+    player::{HeldBy, HeldItemBundle, Holding, Player, TargettedBy},
     resources::{ResourceMarker, ResourceNodeLUT, ResourceNodeType},
     sprites::{GetSprite, SpriteSheets},
     village::{DepositEvent, ResourceStockpile, VillageCentre},
@@ -70,7 +70,7 @@ pub fn pickup_machine(
         (
             With<Placed>,
             With<Machine>,
-            With<Targetted>,
+            With<TargettedBy>,
             Without<VillageCentre>,
         ),
     >,
@@ -138,7 +138,7 @@ pub fn animate_machine(
 pub fn rotate_machine(
     mut targetted_machine: Single<
         (&mut Direction, &mut Transform),
-        (With<Placed>, With<Machine>, With<Targetted>),
+        (With<Placed>, With<Machine>, With<TargettedBy>),
     >,
 ) {
     info!("Rotating machine");

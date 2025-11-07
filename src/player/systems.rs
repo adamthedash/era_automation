@@ -68,10 +68,12 @@ pub fn move_player(
 /// Targets the closest thing to the player
 pub fn target_thing(
     mut commands: Commands,
-    player: Single<&WorldPos, With<Player>>,
+    player: Single<(Entity, &WorldPos), With<Player>>,
     targettables: Query<(Entity, Option<&TilePos>, Option<&WorldPos>), With<Targettable>>,
-    targetted: Query<Entity, With<Targetted>>,
+    targetted: Query<(Entity, &TargettedBy)>,
 ) {
+    let (player_entity, player_pos) = *player;
+
     let closest = targettables
         .iter()
         .map(|(entity, tile_pos, world_pos)| {
@@ -83,38 +85,41 @@ pub fn target_thing(
             });
 
             // Calculate distance
-            let distance2 = player.0.distance_squared(pos.0);
+            let distance2 = player_pos.0.distance_squared(pos.0);
 
             (entity, pos, distance2)
         })
         .filter(|(_, _, distance2)| *distance2 <= PLAYER_REACH.powi(2))
         .min_by(|(_, _, d1), (_, _, d2)| d1.total_cmp(d2));
 
-    for entity in targetted {
+    for (entity, targetted_by) in targetted {
         if let Some((closest_entity, _, _)) = closest
             && entity == closest_entity
         {
-            // Same entity targetted, don't remove it
+            // Same entity targetted by this player, don't remove it
             continue;
         }
 
         commands
             .entity(entity)
             // Entity may be removed by the time this is ran, in which case it doesn't matter
-            .queue_silenced(entity_command::remove::<Targetted>());
+            .queue_silenced(entity_command::remove::<TargettedBy>());
     }
 
     if let Some((entity, _, _)) = closest {
         commands
             .entity(entity)
-            .queue_silenced(entity_command::insert(Targetted, InsertMode::Replace));
+            .queue_silenced(entity_command::insert(
+                TargettedBy(player_entity),
+                InsertMode::Replace,
+            ));
     }
 }
 
 /// Make targetted things bigger
 pub fn highlight_target(
-    event: On<Add, Targetted>,
-    mut transforms: Query<(Entity, &mut Transform), With<Targetted>>,
+    event: On<Add, TargettedBy>,
+    mut transforms: Query<(Entity, &mut Transform), With<TargettedBy>>,
 ) {
     if let Ok((entity, mut transform)) = transforms.get_mut(event.entity) {
         info!("Highlighting target {:?}", entity);
@@ -124,7 +129,7 @@ pub fn highlight_target(
 
 /// Make untargetted things smaller
 pub fn unhighlight_target(
-    event: On<Remove, Targetted>,
+    event: On<Remove, TargettedBy>,
     mut transforms: Query<(Entity, &mut Transform)>,
 ) {
     if let Ok((entity, mut transform)) = transforms.get_mut(event.entity) {
@@ -136,7 +141,7 @@ pub fn unhighlight_target(
 /// Triggered when something is made untargettable
 pub fn make_untargettable(event: On<Remove, Targettable>, mut commands: Commands) {
     // Might be triggered by entity despawning, so try remove
-    commands.entity(event.entity).try_remove::<Targetted>();
+    commands.entity(event.entity).try_remove::<TargettedBy>();
 }
 
 /// Pick up a resource and put it in the player's hand
@@ -145,7 +150,7 @@ pub fn harvest_resource(
     player: Single<Entity, With<Player>>,
     mut targetted_resources: Populated<
         (Entity, &ResourceNodeType, &ItemType, &mut ResourceAmount),
-        (With<ResourceMarker>, With<Targetted>, Without<Player>),
+        (With<ResourceMarker>, With<TargettedBy>, Without<Player>),
     >,
     sprite_sheets: Res<SpriteSheets>,
 ) {
@@ -226,7 +231,7 @@ pub fn check_near_water(
 pub fn show_water_icon(
     player: Single<(Entity, Has<NearWater>, Option<&Holding>), With<Player>>,
     containers: Query<&ContainableItems>,
-    targets: Query<(), With<Targetted>>,
+    targets: Query<(), With<TargettedBy>>,
     water_icon: Option<Single<Entity, With<WaterIcon>>>,
     mut commands: Commands,
     sprite_sheets: Res<SpriteSheets>,

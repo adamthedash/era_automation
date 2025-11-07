@@ -6,7 +6,7 @@ use crate::{
     items::ItemType,
     machines::{AcceptsItems, Machine, MachineLUT, Placed, TransferItem},
     map::TilePos,
-    player::{HeldBy, HeldItemBundle, Targettable, Targetted},
+    player::{HeldBy, HeldItemBundle, Targettable, TargettedBy},
     resources::ResourceType,
     sprites::{GetSprite, ResourceSprite, SpriteSheets},
 };
@@ -115,7 +115,7 @@ pub fn spawn_village_centre(
 
 /// Deposit a held item into the village
 pub fn deposit_resource(
-    village: Single<(Entity, &AcceptsItems), (With<VillageCentre>, With<Targetted>)>,
+    village: Single<(Entity, &AcceptsItems), (With<VillageCentre>, With<TargettedBy>)>,
     held_items: Query<(Entity, &ItemType), (With<HeldBy>, Without<Container>)>,
     held_containers: Query<&Contains, With<HeldBy>>,
     contained_items: Query<&ItemType, With<ContainedBy>>,
