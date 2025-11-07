@@ -115,33 +115,38 @@ pub fn spawn_village_centre(
 
 /// Deposit a held item into the village
 pub fn deposit_resource(
-    village: Single<(Entity, &AcceptsItems), (With<VillageCentre>, With<TargettedBy>)>,
-    held_items: Query<(Entity, &ItemType), (With<HeldBy>, Without<Container>)>,
-    held_containers: Query<&Contains, With<HeldBy>>,
+    village: Single<(Entity, &AcceptsItems, &TargettedBy), With<VillageCentre>>,
+    held_items: Query<(Entity, &ItemType, &HeldBy), Without<Container>>,
+    held_containers: Query<(&Contains, &HeldBy)>,
     contained_items: Query<&ItemType, With<ContainedBy>>,
     mut commands: Commands,
     mut writer: MessageWriter<TransferItem>,
 ) {
-    // Move held depositables to the void
+    // Only deposit items held by the entity that is targeting the village centre
+    let (village_entity, accepts, targetted_by) = *village;
+    let targetter = targetted_by.0;
+
+    // Move held depositables to the void (only those held by the targetter)
     let held_items = held_items
         .iter()
-        .filter(|(_, item_type)| village.1.can_accept(item_type))
-        .map(|(item, _)| {
+        .filter(|(_, item_type, held_by)| held_by.0 == targetter && accepts.can_accept(item_type))
+        .map(|(item, _, _)| {
             commands.entity(item).remove::<HeldItemBundle>();
             item
         })
         .collect::<Vec<_>>();
 
-    // Move depositables from containers to the void
+    // Move depositables from containers held by the targetter to the void
     let contained_items = held_containers
         .iter()
-        .flat_map(|children| {
+        .filter(|(_, held_by)| held_by.0 == targetter)
+        .flat_map(|(children, _)| {
             children.iter().filter(|item| {
                 let item_type = contained_items
                     .get(*item)
                     .expect("Following contained relationship, so this should exist");
 
-                village.1.can_accept(item_type)
+                accepts.can_accept(item_type)
             })
         })
         .inspect(|item| {
@@ -155,7 +160,7 @@ pub fn deposit_resource(
         .for_each(|item| {
             writer.write(TransferItem {
                 item,
-                target_machine: village.0,
+                target_machine: village_entity,
             });
         });
 }
