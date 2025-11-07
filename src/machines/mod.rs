@@ -1,7 +1,9 @@
+pub mod bundles;
 mod components;
 pub mod systems;
 
 use bevy::prelude::*;
+pub use bundles::*;
 pub use components::*;
 use systems::*;
 

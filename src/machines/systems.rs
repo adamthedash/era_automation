@@ -17,6 +17,7 @@ use crate::{
     village::{DepositEvent, ResourceStockpile, VillageCentre},
 };
 
+use super::bundles::*;
 use super::components::*;
 
 /// Place a machine at the player's feet
