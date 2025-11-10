@@ -1,115 +1,25 @@
 use bevy::prelude::*;
 
-use crate::{
-    crafting::Recipe, ground_items::ItemRolled, items::ItemType, player::HarvestEvent,
-    resources::ResourceType, village::DepositEvent,
-};
+use crate::{ground_items::ItemRolled, player::HarvestEvent, village::DepositEvent};
 
 use super::components::*;
+use super::data;
 
 /// Initialise the knowledge
-/// TODO: Move to data file
+/// Knowledge definititions are stored in the data module
 pub fn init_knowledge(mut commands: Commands) {
-    commands.spawn((
-        UnlockName("Bowl".to_string()),
-        UnlockRequirements(vec![
-            UnlockRequirement::TotalDeposited {
-                resource: ResourceType::Wood,
-                amount: 1,
-            },
-            UnlockRequirement::TotalDeposited {
-                resource: ResourceType::Water,
-                amount: 1,
-            },
-        ]),
-        Recipe {
-            reqs: vec![(ResourceType::Wood, 5)],
-            product: ItemType::Bowl,
-        },
-    ));
-    commands.spawn((
-        UnlockName("Harvester".to_string()),
-        UnlockRequirements(vec![
-            UnlockRequirement::TotalDeposited {
-                resource: ResourceType::Wood,
-                amount: 0,
-            },
-            UnlockRequirement::TotalDeposited {
-                resource: ResourceType::Food,
-                amount: 0,
-            },
-        ]),
-        Recipe {
-            reqs: vec![(ResourceType::Wood, 5)],
-            product: ItemType::BushWhacker,
-        },
-    ));
-    commands.spawn((
-        UnlockName("Transporter".to_string()),
-        UnlockRequirements(vec![UnlockRequirement::TotalRolled {
-            item: ItemType::Log,
-            distance: 10.,
-        }]),
-        Recipe {
-            reqs: vec![(ResourceType::Wood, 5)],
-            product: ItemType::Transporter,
-        },
-    ));
-    commands.spawn((
-        UnlockName("Picker-upper".to_string()),
-        UnlockRequirements(vec![]),
-        Recipe {
-            reqs: vec![(ResourceType::Wood, 5)],
-            product: ItemType::PickerUpper,
-        },
-    ));
-    commands.spawn((
-        UnlockName("Trip Axe".to_string()),
-        UnlockRequirements(vec![
-            UnlockRequirement::TotalDeposited {
-                resource: ResourceType::Wood,
-                amount: 0,
-            },
-            UnlockRequirement::TotalDeposited {
-                resource: ResourceType::Food,
-                amount: 0,
-            },
-        ]),
-        Recipe {
-            reqs: vec![(ResourceType::Wood, 5)],
-            product: ItemType::TripAxe,
-        },
-    ));
-    commands.spawn((
-        UnlockName("Water Wheel".to_string()),
-        UnlockRequirements(vec![
-            UnlockRequirement::TotalDeposited {
-                resource: ResourceType::Wood,
-                amount: 0,
-            },
-            UnlockRequirement::TotalDeposited {
-                resource: ResourceType::Food,
-                amount: 0,
-            },
-        ]),
-        Recipe {
-            reqs: vec![(ResourceType::Wood, 5)],
-            product: ItemType::WaterWheel,
-        },
-    ));
-    commands.spawn((
-        UnlockName("Plant Watering".to_string()),
-        UnlockRequirements(vec![
-            UnlockRequirement::TotalDeposited {
-                resource: ResourceType::Food,
-                amount: 2,
-            },
-            UnlockRequirement::TotalDeposited {
-                resource: ResourceType::Water,
-                amount: 2,
-            },
-        ]),
-    ));
+    for knowledge in data::load_knowledge() {
+        // Spawn the base components (name + requirements)
+        let mut entity = commands.spawn((
+            UnlockName(knowledge.name),
+            UnlockRequirements(knowledge.requirements),
+        ));
+
+        // If there is a recipe associated with the knowledge, insert it.
+        if let Some(recipe) = knowledge.recipe {
+            entity.insert(recipe);
+        }
+    }
 }
 
 /// Checks all of the knowledge and unlocks ones that have met their requirements
