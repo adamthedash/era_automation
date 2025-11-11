@@ -13,6 +13,7 @@ pub struct Unlocked;
 #[derive(Component, Debug)]
 pub struct UnlockName(pub String);
 
+#[derive(Clone, Debug)]
 pub enum UnlockRequirement {
     TotalGathered {
         resource: ResourceNodeType,
