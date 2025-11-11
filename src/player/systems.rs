@@ -70,7 +70,7 @@ pub fn target_thing(
     mut commands: Commands,
     player: Single<(Entity, &WorldPos), With<Player>>,
     targettables: Query<(Entity, Option<&TilePos>, Option<&WorldPos>), With<Targettable>>,
-    targetted: Query<(Entity, &TargettedBy)>,
+    targetted: Query<Entity, With<TargettedBy>>,
 ) {
     let (player_entity, player_pos) = *player;
 
@@ -92,7 +92,7 @@ pub fn target_thing(
         .filter(|(_, _, distance2)| *distance2 <= PLAYER_REACH.powi(2))
         .min_by(|(_, _, d1), (_, _, d2)| d1.total_cmp(d2));
 
-    for (entity, targetted_by) in targetted {
+    for entity in targetted {
         if let Some((closest_entity, _, _)) = closest
             && entity == closest_entity
         {
