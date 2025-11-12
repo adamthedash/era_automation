@@ -110,6 +110,11 @@ impl Deref for MachineLUT {
 
 pub type Machines<'w, 's, Q, F> = LUTParam<'w, 's, MachineLUT, TilePos, Q, F>;
 
+/// Resource containing connected networks of placed machines.
+/// Each network is represented as a set of `TilePos` that are adjacent (4-connected).
+#[derive(Resource, Default)]
+pub struct EnergyNetworks(pub Vec<HashSet<TilePos>>);
+
 /// Sprites which are cycled through depending on the progress of the machine
 #[derive(Component)]
 pub struct AnimationSprites(pub Vec<EntitySprite>);

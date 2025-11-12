@@ -13,16 +13,18 @@ pub struct MachinePlugin;
 impl Plugin for MachinePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<MachineLUT>()
+            .init_resource::<EnergyNetworks>()
             .add_message::<TransferItem>()
             .add_systems(
                 FixedUpdate,
                 (
+                    compute_energy_networks,
                     (
+                        tick_windmills,
                         tick_resource_harvesters,
                         tick_terrain_harvesters,
                         tick_transporters,
                         tick_pickerupper,
-                        tick_windmills,
                     ),
                     transfer_items,
                 )

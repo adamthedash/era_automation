@@ -6,7 +6,10 @@ use crate::{
 };
 use std::f32::consts::FRAC_PI_2;
 
-use bevy::{platform::collections::HashMap, prelude::*};
+use bevy::{
+    platform::collections::{HashMap, HashSet},
+    prelude::*,
+};
 
 use crate::{
     ground_items::{GroundItem, GroundItemBundle},
@@ -20,6 +23,46 @@ use crate::{
 
 use super::bundles::*;
 use super::components::*;
+
+/// Compute connected networks of placed machines and store them in the `EnergyNetworks` resource.
+///
+/// Each network is represented as a `HashSet<TilePos>` containing all placed-machine tile positions
+/// that are 4-connected. This system currently recomputes networks on every tick.
+pub fn compute_energy_networks(
+    mut energy_networks: ResMut<EnergyNetworks>,
+    machine_lut: Res<MachineLUT>,
+) {
+    energy_networks.0.clear();
+
+    // Visited set for TilePos values
+    let mut visited = HashSet::new();
+
+    // Iterate over all placed machines (keys in the MachineLUT)
+    for pos in machine_lut.0.keys() {
+        if visited.contains(pos) {
+            continue;
+        }
+
+        // Start a new component
+        let mut stack = vec![*pos];
+        visited.insert(*pos);
+        let mut component = HashSet::new();
+
+        while let Some(cur) = stack.pop() {
+            component.insert(cur);
+
+            // Explore adjacent tile positions (4-connected)
+            for neighbour in cur.adjacent() {
+                if machine_lut.0.contains_key(&neighbour) && !visited.contains(&neighbour) {
+                    visited.insert(neighbour);
+                    stack.push(neighbour);
+                }
+            }
+        }
+
+        energy_networks.0.push(component);
+    }
+}
 
 /// Place a machine at the player's feet
 pub fn place_machine(
