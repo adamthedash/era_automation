@@ -105,6 +105,15 @@ pub fn load_knowledge() -> Vec<KnowledgeDef> {
                 reqs: vec![(ResourceType::Wood, 5)],
                 product: ItemType::WaterWheel,
             }),
+        KnowledgeDef::new("Windmill")
+            .requirement(UnlockRequirement::TotalDeposited {
+                resource: ResourceType::Wood,
+                amount: 1,
+            })
+            .recipe(Recipe {
+                reqs: vec![(ResourceType::Wood, 1)],
+                product: ItemType::Windmill,
+            }),
         KnowledgeDef::new("Plant Watering")
             .requirement(UnlockRequirement::TotalDeposited {
                 resource: ResourceType::Food,
