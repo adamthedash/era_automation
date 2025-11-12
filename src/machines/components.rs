@@ -20,6 +20,7 @@ pub enum Machine {
     Harvester,
     Transporter,
     PickerUpper,
+    Windmill,
 }
 
 impl Machine {
@@ -36,6 +37,9 @@ impl Machine {
             PickerUpper => {
                 commands.insert(PlacedPickerUpperBundle::new(pos, direction));
             }
+            Windmill => {
+                commands.insert(PlacedWindmillBundle::new(pos, direction));
+            }
             VillageCentre => unreachable!("Village centre cannot be placed"),
         }
     }
@@ -51,6 +55,9 @@ impl Machine {
             }
             PickerUpper => {
                 commands.remove::<PlacedPickerUpperBundle>();
+            }
+            Windmill => {
+                commands.remove::<PlacedWindmillBundle>();
             }
             VillageCentre => unreachable!("Village centre cannot be placed"),
         }

@@ -186,3 +186,43 @@ impl WaterWheelBundle {
         }
     }
 }
+
+/// For windmill machines at all times (stateless parts of the prefab)
+#[derive(Bundle)]
+pub struct WindmillBundle {
+    machine_marker: Machine,
+    animation_sprites: AnimationSprites,
+    windmill_marker: Windmill,
+}
+impl WindmillBundle {
+    pub fn new(sprites: Vec<EntitySprite>) -> Self {
+        Self {
+            machine_marker: Machine::Windmill,
+            animation_sprites: AnimationSprites(sprites),
+            windmill_marker: Windmill,
+        }
+    }
+}
+
+/// For windmill machines when placed down (stateful / instance-specific components)
+#[derive(Bundle)]
+pub struct PlacedWindmillBundle {
+    output_direction: Direction,
+    tile_pos: TilePos,
+    transform: Transform,
+    placed: Placed,
+    targettable: Targettable,
+    energy_stored: EnergyStored,
+}
+impl PlacedWindmillBundle {
+    pub fn new(tile_pos: TilePos, direction: IVec2) -> Self {
+        Self {
+            output_direction: Direction(direction),
+            transform: tile_pos.as_transform(Z_RESOURCES),
+            tile_pos,
+            placed: Placed,
+            targettable: Targettable,
+            energy_stored: EnergyStored(0.0),
+        }
+    }
+}
