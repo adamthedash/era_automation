@@ -2,6 +2,7 @@ use crate::{
     map::{Chunks, TerrainData},
     resources::ResourceNodes,
     village::Stockpiles,
+    weather::Wind,
 };
 use std::f32::consts::FRAC_PI_2;
 
@@ -111,7 +112,7 @@ pub fn animate_machine(
             &Children,
             &AnimationSprites,
         ),
-        With<Harvester>,
+        With<Machine>,
     >,
     sprite_entities: Query<(), With<Sprite>>,
     mut commands: Commands,
@@ -479,5 +480,32 @@ pub fn tick_pickerupper(
                     .insert(GroundItemBundle::new(&behind.as_world_pos()));
             }
         }
+    }
+}
+
+/// Tick all placed windmills and add produced energy to their `EnergyStored` component.
+pub fn tick_windmills(
+    wind: Res<Wind>,
+    timer: Res<Time>,
+    windmills: Query<
+        (
+            &Direction,
+            &mut EnergyStored,
+            &MachineSpeed,
+            &mut MachineState,
+        ),
+        With<Windmill>,
+    >,
+) {
+    for (direction, mut energy, speed, mut state) in windmills {
+        // Compute alignment in [-1, 1]; only positive alignment produces energy.
+        let alignment = direction.0.as_vec2().dot(wind.direction_vec()).max(0.0);
+
+        // Produced energy this tick (wind.speed is units-per-second).
+        let produced = wind.speed * alignment * timer.delta_secs();
+        energy.0 += produced;
+
+        // Update animation
+        state.0 = (state.0 + produced) % speed.0;
     }
 }

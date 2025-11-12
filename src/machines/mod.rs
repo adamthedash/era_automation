@@ -1,17 +1,13 @@
 pub mod bundles;
 mod components;
 pub mod systems;
-mod windmill;
 
 use bevy::prelude::*;
 pub use bundles::*;
 pub use components::*;
 use systems::*;
 
-use crate::{
-    machines::windmill::tick_windmills,
-    utils::run_if::{empty_hands, key_just_pressed},
-};
+use crate::utils::run_if::{empty_hands, key_just_pressed};
 
 pub struct MachinePlugin;
 impl Plugin for MachinePlugin {
