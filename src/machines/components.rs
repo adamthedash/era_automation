@@ -84,11 +84,16 @@ impl AcceptsItems {
 #[derive(Component)]
 pub struct Direction(pub IVec2);
 
-/// How long does one action take, in seconds
+/// Maximum work rate of the machine when fully powered (actions per second).
 #[derive(Component)]
 pub struct MachineSpeed(pub f32);
 
-/// How long along an action the machine currently is
+/// Maximum power the machine can consume per second. Units match `CurrentEnergy`.
+#[derive(Component)]
+pub struct PowerConsumption(pub f32);
+
+/// How much progress the machine has made towards completing one action.
+/// 0 - 1
 #[derive(Component, Default)]
 pub struct MachineState(pub f32);
 

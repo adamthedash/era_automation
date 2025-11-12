@@ -75,19 +75,29 @@ impl ItemType {
             BushWhacker => {
                 commands.insert(HarvesterBundle::new(
                     2.,
+                    1.,
                     [ResourceNodeType::Bush],
                     vec![EntitySprite::BushWhacker1, EntitySprite::BushWhacker2],
                 ));
             }
             Transporter => {
-                commands.insert(TransporterBundle::new(2., vec![EntitySprite::Transporter]));
+                commands.insert(TransporterBundle::new(
+                    2.,
+                    1.,
+                    vec![EntitySprite::Transporter],
+                ));
             }
             PickerUpper => {
-                commands.insert(PickerUpperBundle::new(2., vec![EntitySprite::PickerUpper]));
+                commands.insert(PickerUpperBundle::new(
+                    2.,
+                    1.,
+                    vec![EntitySprite::PickerUpper],
+                ));
             }
             TripAxe => {
                 commands.insert(HarvesterBundle::new(
                     2.,
+                    1.,
                     [ResourceNodeType::Tree],
                     vec![EntitySprite::TripAxe1, EntitySprite::TripAxe2],
                 ));
@@ -95,6 +105,7 @@ impl ItemType {
             WaterWheel => {
                 commands.insert(WaterWheelBundle::new(
                     2.,
+                    1.,
                     [TerrainSprite::Water],
                     vec![EntitySprite::WaterWheel1, EntitySprite::WaterWheel2],
                 ));

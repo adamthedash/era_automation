@@ -18,10 +18,12 @@ pub struct HarvesterBundle {
     harvester_marker: Harvester,
     harvestable_nodes: HarvestableNodes,
     speed: MachineSpeed,
+    power_consumption: PowerConsumption,
 }
 impl HarvesterBundle {
     pub fn new(
         speed: f32,
+        power_consumption: f32,
         harvestable_nodes: impl IntoIterator<Item = ResourceNodeType>,
         sprites: Vec<EntitySprite>,
     ) -> Self {
@@ -30,6 +32,7 @@ impl HarvesterBundle {
             harvester_marker: Harvester,
             harvestable_nodes: HarvestableNodes(HashSet::from_iter(harvestable_nodes)),
             speed: MachineSpeed(speed),
+            power_consumption: PowerConsumption(power_consumption),
             animation_sprites: AnimationSprites(sprites),
         }
     }
@@ -65,14 +68,16 @@ pub struct TransporterBundle {
     animation_sprites: AnimationSprites,
     transporter_marker: Transporter,
     speed: MachineSpeed,
+    power_consumption: PowerConsumption,
     accepts_items: AcceptsItems,
 }
 impl TransporterBundle {
-    pub fn new(speed: f32, sprites: Vec<EntitySprite>) -> Self {
+    pub fn new(speed: f32, power_consumption: f32, sprites: Vec<EntitySprite>) -> Self {
         Self {
             machine_marker: Machine::Transporter,
             transporter_marker: Transporter,
             speed: MachineSpeed(speed),
+            power_consumption: PowerConsumption(power_consumption),
             animation_sprites: AnimationSprites(sprites),
             accepts_items: AcceptsItems::Any,
         }
@@ -128,14 +133,16 @@ pub struct PickerUpperBundle {
     animation_sprites: AnimationSprites,
     pickerupper_marker: PickerUpper,
     speed: MachineSpeed,
+    power_consumption: PowerConsumption,
 }
 impl PickerUpperBundle {
-    pub fn new(speed: f32, sprites: Vec<EntitySprite>) -> Self {
+    pub fn new(speed: f32, power_consumption: f32, sprites: Vec<EntitySprite>) -> Self {
         Self {
             machine_marker: Machine::PickerUpper,
             animation_sprites: AnimationSprites(sprites),
             pickerupper_marker: PickerUpper,
             speed: MachineSpeed(speed),
+            power_consumption: PowerConsumption(power_consumption),
         }
     }
 }
@@ -170,10 +177,12 @@ pub struct WaterWheelBundle {
     harvester_marker: Harvester,
     harvestable_terrain: HarvestableTerrain,
     speed: MachineSpeed,
+    power_consumption: PowerConsumption,
 }
 impl WaterWheelBundle {
     pub fn new(
         speed: f32,
+        power_consumption: f32,
         harvestable_terrain: impl IntoIterator<Item = TerrainSprite>,
         sprites: Vec<EntitySprite>,
     ) -> Self {
@@ -183,6 +192,7 @@ impl WaterWheelBundle {
             harvester_marker: Harvester,
             harvestable_terrain: HarvestableTerrain(HashSet::from_iter(harvestable_terrain)),
             speed: MachineSpeed(speed),
+            power_consumption: PowerConsumption(power_consumption),
         }
     }
 }

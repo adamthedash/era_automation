@@ -104,22 +104,14 @@ pub fn pickup_machine(
 
 /// Cycle through the sprites as the machine makes progress
 pub fn animate_machine(
-    machines: Query<
-        (
-            Entity,
-            &MachineState,
-            &MachineSpeed,
-            &Children,
-            &AnimationSprites,
-        ),
-        With<Machine>,
-    >,
+    machines: Query<(Entity, &MachineState, &Children, &AnimationSprites), With<Machine>>,
     sprite_entities: Query<(), With<Sprite>>,
     mut commands: Commands,
     sprite_sheets: Res<SpriteSheets>,
 ) {
-    for (machine, state, speed, children, sprites) in machines {
-        let sprite_index = (state.0 / (speed.0 / sprites.0.len() as f32)) as usize;
+    for (machine, state, children, sprites) in machines {
+        // Use the fractional part of the machine's progress as the animation phase.
+        let sprite_index = (state.0.fract() * sprites.0.len() as f32) as usize;
 
         // Delete old sprite
         // TODO: Only advance sprite when it changes
@@ -218,6 +210,7 @@ pub fn tick_resource_harvesters(
             &TilePos,
             &mut MachineState,
             &MachineSpeed,
+            &PowerConsumption,
             &Direction,
             &HarvestableNodes,
         ),
@@ -231,7 +224,7 @@ pub fn tick_resource_harvesters(
     mut commands: Commands,
     mut transfer_items: MessageWriter<TransferItem>,
 ) {
-    for (tile_pos, mut state, speed, direction, harvestable_nodes) in harvesters {
+    for (tile_pos, mut state, speed, power, direction, harvestable_nodes) in harvesters {
         // Check if there's a harvestable node in front of the machine
         let resource_pos = tile_pos + direction.0;
 
@@ -249,20 +242,24 @@ pub fn tick_resource_harvesters(
         }
 
         // Accumulate energy produced by adjacent machines
-        let energy = tile_pos
+        let energy_supply = tile_pos
             .adjacent()
             .flat_map(|pos| energy_producers.get(&pos).map(|e| e.0))
             .sum::<f32>();
 
-        // Tick the machine
-        state.0 += energy * timer.delta_secs();
+        // Calculate work rate at current power level
+        let satisfaction = (energy_supply / power.0).min(1.);
+        let work_rate = speed.0 * satisfaction;
+
+        // Advance progress (1.0 == one completed action)
+        state.0 += work_rate * timer.delta_secs();
 
         // Check if harvest has been completed
-        if state.0 < speed.0 {
+        if state.0 < 1.0 {
             // Not done yet
             continue;
         }
-        state.0 -= speed.0;
+        state.0 -= 1.0;
 
         // Spawn an item
         let output_pos = tile_pos - direction.0;
@@ -297,6 +294,7 @@ pub fn tick_terrain_harvesters(
             &TilePos,
             &mut MachineState,
             &MachineSpeed,
+            &PowerConsumption,
             &Direction,
             &HarvestableTerrain,
         ),
@@ -310,7 +308,7 @@ pub fn tick_terrain_harvesters(
     mut commands: Commands,
     mut transfer_items: MessageWriter<TransferItem>,
 ) {
-    for (tile_pos, mut state, speed, direction, harvestable_terrain) in harvesters {
+    for (tile_pos, mut state, speed, power, direction, harvestable_terrain) in harvesters {
         // Check if there's a harvestable node under of the machine
         let resource_pos = tile_pos + direction.0;
 
@@ -334,20 +332,24 @@ pub fn tick_terrain_harvesters(
         };
 
         // Accumulate energy produced by adjacent machines (e.g., windmills)
-        let energy = tile_pos
+        let energy_supply = tile_pos
             .adjacent()
             .flat_map(|pos| energy_producers.get(&pos).map(|e| e.0))
             .sum::<f32>();
 
+        // Calculate work rate at current power level
+        let satisfaction = (energy_supply / power.0).min(1.0);
+        let work_rate = speed.0 * satisfaction;
+
         // Tick the machine (scaled by available adjacent energy)
-        state.0 += energy * timer.delta_secs();
+        state.0 += work_rate * timer.delta_secs();
 
         // Check if harvest has been completed
-        if state.0 < speed.0 {
+        if state.0 < 1.0 {
             // Not done yet
             continue;
         }
-        state.0 -= speed.0;
+        state.0 -= 1.0;
 
         // Spawn an item
         let output_pos = tile_pos + direction.0;
@@ -381,29 +383,49 @@ pub fn tick_transporters(
         (Entity, &mut Transform, &mut MachineState, &ItemType),
         With<TransportedBy>,
     >,
-    transporters: Query<(&MachineSpeed, &Direction, &Children, &TilePos), With<Transporter>>,
+    transporters: Query<
+        (
+            &MachineSpeed,
+            &PowerConsumption,
+            &Direction,
+            &Children,
+            &TilePos,
+        ),
+        With<Transporter>,
+    >,
     machines: Machines<(Entity, &Machine, &AcceptsItems), With<Placed>>,
+    energy_producers: Machines<&CurrentEnergy, With<Placed>>,
     timer: Res<Time>,
     mut commands: Commands,
     mut transfer_items: MessageWriter<TransferItem>,
 ) {
-    for (speed, direction, children, machine_pos) in transporters {
+    for (speed, power, direction, children, machine_pos) in transporters {
+        // Compute available adjacent energy for this transporter
+        let energy_supply = machine_pos
+            .adjacent()
+            .flat_map(|pos| energy_producers.get(&pos).map(|e| e.0))
+            .sum::<f32>();
+
+        // Calculate work rate based on current power supply
+        let satisfaction = (energy_supply / power.0).min(1.0);
+        let work_rate = speed.0 * satisfaction;
+
         for child in children {
-            let Ok((item, mut transform, mut state, item_type)) = transported_items.get_mut(*child)
+            let Ok((item, mut transform, mut progress, item_type)) =
+                transported_items.get_mut(*child)
             else {
                 // Non-item child
                 continue;
             };
 
-            // Move item along the current transporter
-            state.0 += timer.delta_secs();
-            let progress = state.0 / speed.0;
+            // Move item along the current transporter (state.0 counts actions completed)
+            progress.0 += work_rate * timer.delta_secs();
 
             // Items always travel along +X, as rotation is handled by machine-level transform
-            transform.translation = Vec3::new(progress - 0.5, 0., transform.translation.z);
+            transform.translation = Vec3::new(progress.0 - 0.5, 0., transform.translation.z);
 
             // Check if the item has gone off the end
-            if progress >= 1. {
+            if progress.0 >= 1. {
                 // Check if there's another transporter next to it
                 let adjacent_pos = machine_pos + direction.0;
                 if let Some((machine, machine_type, acceptable_items)) = machines.get(&adjacent_pos)
@@ -432,11 +454,18 @@ pub fn tick_transporters(
 /// Advance the state of the picker-upper if there's an item on its tile
 pub fn tick_pickerupper(
     picker_uppers: Query<
-        (&TilePos, &mut MachineState, &MachineSpeed, &Direction),
+        (
+            &TilePos,
+            &mut MachineState,
+            &MachineSpeed,
+            &PowerConsumption,
+            &Direction,
+        ),
         With<PickerUpper>,
     >,
     machines: Machines<(Entity, &Machine, &AcceptsItems), With<Placed>>,
     ground_items: Query<(Entity, &WorldPos, &ItemType), With<GroundItem>>,
+    energy_producers: Machines<&CurrentEnergy, With<Placed>>,
     timer: Res<Time>,
     mut commands: Commands,
     mut transfer_items: MessageWriter<TransferItem>,
@@ -455,17 +484,27 @@ pub fn tick_pickerupper(
         },
     );
 
-    for (machine_pos, mut state, speed, direction) in picker_uppers {
+    for (machine_pos, mut state, speed, power, direction) in picker_uppers {
         let Some(items) = ground_items.get(machine_pos) else {
             // No items, reset progress
             state.0 = 0.;
             continue;
         };
 
+        // Accumulate energy produced by adjacent machines
+        let energy_supply = machine_pos
+            .adjacent()
+            .flat_map(|pos| energy_producers.get(&pos).map(|e| e.0))
+            .sum::<f32>();
+
+        // Calculate work rate at current power level
+        let satisfaction = (energy_supply / power.0).min(1.0);
+        let work_rate = speed.0 * satisfaction;
+
         // Advance state
-        state.0 += timer.delta_secs();
-        if state.0 >= speed.0 {
-            state.0 -= speed.0;
+        state.0 += work_rate * timer.delta_secs();
+        if state.0 >= 1.0 {
+            state.0 -= 1.0;
 
             // Pick up an item
             let (item, item_type) = *items
