@@ -144,3 +144,11 @@ pub struct TransferItem {
     /// Machine should be placed & accepting items
     pub target_machine: Entity,
 }
+
+/// Stored kinetic energy for machines that generate or hold energy (e.g. windmills).
+#[derive(Component)]
+pub struct EnergyStored(pub f32);
+
+/// Marker for windmill machines
+#[derive(Component)]
+pub struct Windmill;
