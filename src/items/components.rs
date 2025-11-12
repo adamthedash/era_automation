@@ -2,7 +2,9 @@ use bevy::{platform::collections::HashSet, prelude::*};
 
 use crate::{
     container::{ContainableItems, Container},
-    machines::{HarvesterBundle, PickerUpperBundle, TransporterBundle, WaterWheelBundle},
+    machines::{
+        HarvesterBundle, PickerUpperBundle, TransporterBundle, WaterWheelBundle, WindmillBundle,
+    },
     resources::{ResourceNodeType, ResourceType},
     sprites::{EntitySprite, GetSprite, ItemSprite, SpriteSheets, TerrainSprite},
 };
@@ -19,6 +21,7 @@ pub enum ItemType {
     PickerUpper,
     TripAxe,
     WaterWheel,
+    Windmill,
 }
 
 impl ItemType {
@@ -34,6 +37,7 @@ impl ItemType {
             PickerUpper => ItemSprite::PickerUpper,
             TripAxe => ItemSprite::TripAxe,
             WaterWheel => ItemSprite::WaterWheel,
+            Windmill => ItemSprite::Windmill,
         }
     }
 
@@ -50,6 +54,7 @@ impl ItemType {
             PickerUpper => None,
             TripAxe => None,
             WaterWheel => None,
+            Windmill => None,
         }
     }
 
@@ -92,6 +97,12 @@ impl ItemType {
                     2.,
                     [TerrainSprite::Water],
                     vec![EntitySprite::WaterWheel1, EntitySprite::WaterWheel2],
+                ));
+            }
+            Windmill => {
+                commands.insert(WindmillBundle::new(
+                    2.,
+                    vec![EntitySprite::Windmill1, EntitySprite::Windmill2],
                 ));
             }
             _ => (),

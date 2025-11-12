@@ -49,6 +49,8 @@ pub enum EntitySprite {
     TripAxe2,
     WaterWheel1,
     WaterWheel2,
+    Windmill1,
+    Windmill2,
 }
 
 /// Indexes into item_sheet.png
@@ -64,6 +66,7 @@ pub enum ItemSprite {
     PickerUpper,
     TripAxe,
     WaterWheel,
+    Windmill,
 }
 
 /// Holds a spritesheet image & layout info

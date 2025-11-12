@@ -193,13 +193,16 @@ pub struct WindmillBundle {
     machine_marker: Machine,
     animation_sprites: AnimationSprites,
     windmill_marker: Windmill,
+    // Speed is just used for animation for windmills
+    speed: MachineSpeed,
 }
 impl WindmillBundle {
-    pub fn new(sprites: Vec<EntitySprite>) -> Self {
+    pub fn new(speed: f32, sprites: Vec<EntitySprite>) -> Self {
         Self {
             machine_marker: Machine::Windmill,
             animation_sprites: AnimationSprites(sprites),
             windmill_marker: Windmill,
+            speed: MachineSpeed(speed),
         }
     }
 }
@@ -213,6 +216,8 @@ pub struct PlacedWindmillBundle {
     placed: Placed,
     targettable: Targettable,
     energy_stored: EnergyStored,
+    // State is just used for animation for windmills
+    state: MachineState,
 }
 impl PlacedWindmillBundle {
     pub fn new(tile_pos: TilePos, direction: IVec2) -> Self {
@@ -223,6 +228,7 @@ impl PlacedWindmillBundle {
             placed: Placed,
             targettable: Targettable,
             energy_stored: EnergyStored(0.0),
+            state: MachineState(0.),
         }
     }
 }
