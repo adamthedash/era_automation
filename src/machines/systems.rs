@@ -425,27 +425,30 @@ pub fn tick_transporters(
             transform.translation = Vec3::new(progress.0 - 0.5, 0., transform.translation.z);
 
             // Check if the item has gone off the end
-            if progress.0 >= 1. {
-                // Check if there's another transporter next to it
-                let adjacent_pos = machine_pos + direction.0;
-                if let Some((machine, machine_type, acceptable_items)) = machines.get(&adjacent_pos)
-                    && acceptable_items.can_accept(item_type)
-                {
-                    info!("Transferring item Transporter -> {:?}", machine_type);
+            if progress.0 < 1. {
+                // Still on the belt
+                continue;
+            }
 
-                    // Request to transfer to the target machine
-                    transfer_items.write(TransferItem {
-                        item,
-                        target_machine: machine,
-                    });
-                } else {
-                    // Drop item on ground
-                    commands.entity(item).remove::<TransportedItemBundle>();
+            // Move item off the conveyor
+            let adjacent_pos = machine_pos + direction.0;
+            if let Some((machine, machine_type, acceptable_items)) = machines.get(&adjacent_pos)
+                && acceptable_items.can_accept(item_type)
+            {
+                info!("Transferring item Transporter -> {:?}", machine_type);
 
-                    commands
-                        .entity(item)
-                        .insert(GroundItemBundle::new(&adjacent_pos.as_world_pos()));
-                }
+                // Request to transfer to the target machine
+                transfer_items.write(TransferItem {
+                    item,
+                    target_machine: machine,
+                });
+            } else {
+                // Drop item on ground
+                commands.entity(item).remove::<TransportedItemBundle>();
+
+                commands
+                    .entity(item)
+                    .insert(GroundItemBundle::new(&adjacent_pos.as_world_pos()));
             }
         }
     }
@@ -503,35 +506,37 @@ pub fn tick_pickerupper(
 
         // Advance state
         state.0 += work_rate * timer.delta_secs();
-        if state.0 >= 1.0 {
-            state.0 -= 1.0;
+        if state.0 < 1.0 {
+            // Not done yet
+            continue;
+        }
+        state.0 -= 1.0;
 
-            // Pick up an item
-            let (item, item_type) = *items
-                .first()
-                .expect("If hashmap has entry, there should be at least 1 item");
-            commands.entity(item).remove::<GroundItemBundle>();
+        // Pick up an item
+        let (item, item_type) = *items
+            .first()
+            .expect("If hashmap has entry, there should be at least 1 item");
+        commands.entity(item).remove::<GroundItemBundle>();
 
-            let behind = machine_pos + direction.0;
+        let behind = machine_pos + direction.0;
 
-            // Check if there's something beside it
-            if let Some((machine, machine_type, acceptable_items)) = machines.get(&behind)
-                && acceptable_items.can_accept(item_type)
-            {
-                info!("Transferring item Picker-upper -> {:?}", machine_type);
+        // Check if there's something beside it
+        if let Some((machine, machine_type, acceptable_items)) = machines.get(&behind)
+            && acceptable_items.can_accept(item_type)
+        {
+            info!("Transferring item Picker-upper -> {:?}", machine_type);
 
-                // Request to transfer to the target machine
-                transfer_items.write(TransferItem {
-                    item,
-                    target_machine: machine,
-                });
-            } else {
-                info!("Transferring item Picker-upper -> ground");
-                // Drop item on ground
-                commands
-                    .entity(item)
-                    .insert(GroundItemBundle::new(&behind.as_world_pos()));
-            }
+            // Request to transfer to the target machine
+            transfer_items.write(TransferItem {
+                item,
+                target_machine: machine,
+            });
+        } else {
+            info!("Transferring item Picker-upper -> ground");
+            // Drop item on ground
+            commands
+                .entity(item)
+                .insert(GroundItemBundle::new(&behind.as_world_pos()));
         }
     }
 }
