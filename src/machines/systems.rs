@@ -225,6 +225,7 @@ pub fn tick_resource_harvesters(
     >,
     resources: ResourceNodes<(&ResourceNodeType, &ItemType), With<ResourceMarker>>,
     machines: Machines<(Entity, &Machine, &AcceptsItems), With<Placed>>,
+    energy_producers: Machines<&CurrentEnergy, With<Placed>>,
     timer: Res<Time>,
     sprite_sheets: Res<SpriteSheets>,
     mut commands: Commands,
@@ -247,8 +248,14 @@ pub fn tick_resource_harvesters(
             continue;
         }
 
+        // Accumulate energy produced by adjacent machines
+        let energy = tile_pos
+            .adjacent()
+            .flat_map(|pos| energy_producers.get(&pos).map(|e| e.0))
+            .sum::<f32>();
+
         // Tick the machine
-        state.0 += timer.delta_secs();
+        state.0 += energy * timer.delta_secs();
 
         // Check if harvest has been completed
         if state.0 < speed.0 {
@@ -483,29 +490,29 @@ pub fn tick_pickerupper(
     }
 }
 
-/// Tick all placed windmills and add produced energy to their `EnergyStored` component.
+/// Tick all placed windmills and update their current production in the `CurrentEnergy` component.
 pub fn tick_windmills(
     wind: Res<Wind>,
     timer: Res<Time>,
     windmills: Query<
         (
             &Direction,
-            &mut EnergyStored,
+            &mut CurrentEnergy,
             &MachineSpeed,
             &mut MachineState,
         ),
         With<Windmill>,
     >,
 ) {
-    for (direction, mut energy, speed, mut state) in windmills {
+    for (direction, mut current_energy, speed, mut state) in windmills {
         // Compute alignment in [-1, 1]; only positive alignment produces energy.
         let alignment = direction.0.as_vec2().dot(wind.direction_vec()).max(0.0);
 
-        // Produced energy this tick (wind.speed is units-per-second).
-        let produced = wind.speed * alignment * timer.delta_secs();
-        energy.0 += produced;
+        // Update energy production rate
+        current_energy.0 = wind.speed * alignment;
 
         // Update animation
+        let produced = current_energy.0 * timer.delta_secs();
         state.0 = (state.0 + produced) % speed.0;
     }
 }

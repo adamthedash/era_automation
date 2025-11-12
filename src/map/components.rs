@@ -28,6 +28,13 @@ impl TilePos {
 
         (chunk, offset)
     }
+
+    /// Get adjacent tile positions
+    pub fn adjacent(&self) -> impl Iterator<Item = Self> {
+        [IVec2::X, IVec2::Y, -IVec2::X, -IVec2::Y]
+            .into_iter()
+            .map(move |offset| self + offset)
+    }
 }
 
 impl_op_ex!(+ |a: &TilePos, b: &IVec2| -> TilePos { TilePos(a.0 + b) });

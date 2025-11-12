@@ -152,9 +152,9 @@ pub struct TransferItem {
     pub target_machine: Entity,
 }
 
-/// Stored kinetic energy for machines that generate or hold energy (e.g. windmills).
+/// Current energy produced per second by windmills (amount available to adjacent machines).
 #[derive(Component)]
-pub struct EnergyStored(pub f32);
+pub struct CurrentEnergy(pub f32);
 
 /// Marker for windmill machines
 #[derive(Component)]
