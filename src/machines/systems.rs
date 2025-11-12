@@ -304,6 +304,7 @@ pub fn tick_terrain_harvesters(
     >,
     chunks: Chunks<&TerrainData>,
     machines: Machines<(Entity, &Machine, &AcceptsItems), With<Placed>>,
+    energy_producers: Machines<&CurrentEnergy, With<Placed>>,
     timer: Res<Time>,
     sprite_sheets: Res<SpriteSheets>,
     mut commands: Commands,
@@ -332,8 +333,14 @@ pub fn tick_terrain_harvesters(
             continue;
         };
 
-        // Tick the machine
-        state.0 += timer.delta_secs();
+        // Accumulate energy produced by adjacent machines (e.g., windmills)
+        let energy = tile_pos
+            .adjacent()
+            .flat_map(|pos| energy_producers.get(&pos).map(|e| e.0))
+            .sum::<f32>();
+
+        // Tick the machine (scaled by available adjacent energy)
+        state.0 += energy * timer.delta_secs();
 
         // Check if harvest has been completed
         if state.0 < speed.0 {
