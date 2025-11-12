@@ -32,7 +32,9 @@ pub fn compute_energy_networks(
     mut energy_networks: ResMut<EnergyNetworks>,
     machine_lut: Res<MachineLUT>,
 ) {
-    energy_networks.0.clear();
+    // Clear previous networks and membership map
+    energy_networks.networks.clear();
+    energy_networks.membership.clear();
 
     // Visited set for TilePos values
     let mut visited = HashSet::new();
@@ -60,7 +62,12 @@ pub fn compute_energy_networks(
             }
         }
 
-        energy_networks.0.push(component);
+        // Record the network and update membership mapping for quick lookup
+        let index = energy_networks.networks.len();
+        for tile in component.iter() {
+            energy_networks.membership.insert(*tile, index);
+        }
+        energy_networks.networks.push(component);
     }
 }
 
