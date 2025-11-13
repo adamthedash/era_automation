@@ -225,7 +225,7 @@ pub struct PlacedWindmillBundle {
     transform: Transform,
     placed: Placed,
     targettable: Targettable,
-    current_energy: CurrentEnergy,
+    current_production: PowerProduction,
     // State is just used for animation for windmills
     state: MachineState,
 }
@@ -237,7 +237,7 @@ impl PlacedWindmillBundle {
             tile_pos,
             placed: Placed,
             targettable: Targettable,
-            current_energy: CurrentEnergy(0.0),
+            current_production: PowerProduction(0.0),
             state: MachineState(0.),
         }
     }

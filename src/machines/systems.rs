@@ -71,6 +71,56 @@ pub fn compute_energy_networks(
     }
 }
 
+/// Calculate power production for each network
+pub fn produce_energy(
+    mut energy_networks: ResMut<EnergyNetworks>,
+    energy_producers: Query<(&TilePos, &PowerProduction), With<Placed>>,
+) {
+    energy_networks.power_available = vec![0.; energy_networks.networks.len()];
+
+    for (tile_pos, production) in energy_producers {
+        let network = *energy_networks
+            .membership
+            .get(tile_pos)
+            .expect("Producer has no network");
+        energy_networks.power_available[network] += production.0;
+    }
+}
+
+/// Distribute energy in the network according to each machine's needs
+pub fn distribute_energy(mut energy_networks: ResMut<EnergyNetworks>) {
+    energy_networks.power_provided = energy_networks
+        .power_available
+        .iter()
+        .enumerate()
+        // Distribute power for each network
+        .flat_map(|(network, &power)| {
+            // Calculcate network-level power satisfaction
+            let total_demand = energy_networks.networks[network]
+                .iter()
+                .flat_map(|tile_pos| energy_networks.power_demands.get(tile_pos))
+                .sum::<f32>();
+
+            let satisfaction = if total_demand == 0. {
+                1.
+            } else {
+                (power / total_demand).min(1.)
+            };
+
+            // Distribute to each consumer
+            energy_networks.networks[network]
+                .iter()
+                .flat_map(|tile_pos| {
+                    energy_networks
+                        .power_demands
+                        .get(tile_pos)
+                        .map(|demand| (*tile_pos, demand * satisfaction))
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect::<HashMap<_, _>>();
+}
+
 /// Place a machine at the player's feet
 pub fn place_machine(
     player: Single<(&WorldPos, &Holding), With<Player>>,
@@ -253,6 +303,42 @@ pub fn transfer_items(
     }
 }
 
+pub fn precheck_resource_harvesters(
+    harvesters: Query<
+        (
+            &TilePos,
+            &mut MachineState,
+            &PowerConsumption,
+            &Direction,
+            &HarvestableNodes,
+        ),
+        With<Harvester>,
+    >,
+    resources: ResourceNodes<&ResourceNodeType, With<ResourceMarker>>,
+    mut energy_networks: ResMut<EnergyNetworks>,
+) {
+    for (tile_pos, mut state, power, direction, harvestable_nodes) in harvesters {
+        let resource_pos = tile_pos + direction.0;
+
+        // Check if there's a harvestable node in front of the machine
+        let Some(resource_type) = resources.get(&resource_pos) else {
+            // No resource, so reset progress
+            state.0 = 0.;
+            continue;
+        };
+
+        // Check that resource can be harvested by this machine
+        if !harvestable_nodes.0.contains(resource_type) {
+            // Can't harvest this type of node, so reset progress
+            state.0 = 0.;
+            continue;
+        }
+
+        // Register power demand for this machine
+        energy_networks.power_demands.insert(*tile_pos, power.0);
+    }
+}
+
 /// Advance the state of the harvesters if there is a resource beside it
 pub fn tick_resource_harvesters(
     harvesters: Query<
@@ -268,13 +354,15 @@ pub fn tick_resource_harvesters(
     >,
     resources: ResourceNodes<(&ResourceNodeType, &ItemType), With<ResourceMarker>>,
     machines: Machines<(Entity, &Machine, &AcceptsItems), With<Placed>>,
-    energy_producers: Machines<&CurrentEnergy, With<Placed>>,
+    energy_networks: Res<EnergyNetworks>,
     timer: Res<Time>,
     sprite_sheets: Res<SpriteSheets>,
     mut commands: Commands,
     mut transfer_items: MessageWriter<TransferItem>,
 ) {
     for (tile_pos, mut state, speed, power, direction, harvestable_nodes) in harvesters {
+        // TODO: These pre-checks have already been done for power calculations
+
         // Check if there's a harvestable node in front of the machine
         let resource_pos = tile_pos + direction.0;
 
@@ -291,11 +379,10 @@ pub fn tick_resource_harvesters(
             continue;
         }
 
-        // Accumulate energy produced by adjacent machines
-        let energy_supply = tile_pos
-            .adjacent()
-            .flat_map(|pos| energy_producers.get(&pos).map(|e| e.0))
-            .sum::<f32>();
+        let energy_supply = energy_networks
+            .power_provided
+            .get(tile_pos)
+            .expect("No power provided for this machine!");
 
         // Calculate work rate at current power level
         let satisfaction = (energy_supply / power.0).min(1.);
@@ -352,7 +439,7 @@ pub fn tick_terrain_harvesters(
     >,
     chunks: Chunks<&TerrainData>,
     machines: Machines<(Entity, &Machine, &AcceptsItems), With<Placed>>,
-    energy_producers: Machines<&CurrentEnergy, With<Placed>>,
+    energy_producers: Machines<&PowerProduction, With<Placed>>,
     timer: Res<Time>,
     sprite_sheets: Res<SpriteSheets>,
     mut commands: Commands,
@@ -444,7 +531,7 @@ pub fn tick_transporters(
         With<Transporter>,
     >,
     machines: Machines<(Entity, &Machine, &AcceptsItems), With<Placed>>,
-    energy_producers: Machines<&CurrentEnergy, With<Placed>>,
+    energy_producers: Machines<&PowerProduction, With<Placed>>,
     timer: Res<Time>,
     mut commands: Commands,
     mut transfer_items: MessageWriter<TransferItem>,
@@ -518,7 +605,7 @@ pub fn tick_pickerupper(
     >,
     machines: Machines<(Entity, &Machine, &AcceptsItems), With<Placed>>,
     ground_items: Query<(Entity, &WorldPos, &ItemType), With<GroundItem>>,
-    energy_producers: Machines<&CurrentEnergy, With<Placed>>,
+    energy_producers: Machines<&PowerProduction, With<Placed>>,
     timer: Res<Time>,
     mut commands: Commands,
     mut transfer_items: MessageWriter<TransferItem>,
@@ -598,7 +685,7 @@ pub fn tick_windmills(
     windmills: Query<
         (
             &Direction,
-            &mut CurrentEnergy,
+            &mut PowerProduction,
             &MachineSpeed,
             &mut MachineState,
         ),

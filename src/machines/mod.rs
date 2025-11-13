@@ -19,8 +19,14 @@ impl Plugin for MachinePlugin {
                 FixedUpdate,
                 (
                     compute_energy_networks,
+                    (tick_windmills,),
+                    produce_energy,
+                    |mut networks: ResMut<EnergyNetworks>| {
+                        networks.power_demands.clear();
+                    },
+                    (precheck_resource_harvesters,),
+                    distribute_energy,
                     (
-                        tick_windmills,
                         tick_resource_harvesters,
                         tick_terrain_harvesters,
                         tick_transporters,
