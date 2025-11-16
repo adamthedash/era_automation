@@ -558,6 +558,22 @@ pub fn tick_terrain_harvesters(
     }
 }
 
+pub fn precheck_transporters(
+    transported_items: Query<(), With<TransportedBy>>,
+    transporters: Query<(&PowerConsumption, &Children, &TilePos), With<Transporter>>,
+    mut energy_networks: ResMut<EnergyNetworks>,
+) {
+    for (power, children, machine_pos) in transporters {
+        if children
+            .iter()
+            .any(|child| transported_items.contains(child))
+        {
+            // TODO: Increase power consumption per item?
+            energy_networks.power_demands.insert(*machine_pos, power.0);
+        }
+    }
+}
+
 /// Move items along the transporter
 pub fn tick_transporters(
     mut transported_items: Query<
@@ -575,17 +591,18 @@ pub fn tick_transporters(
         With<Transporter>,
     >,
     machines: Machines<(Entity, &Machine, &AcceptsItems), With<Placed>>,
-    energy_producers: Machines<&PowerProduction, With<Placed>>,
+    energy_networks: Res<EnergyNetworks>,
     timer: Res<Time>,
     mut commands: Commands,
     mut transfer_items: MessageWriter<TransferItem>,
 ) {
     for (speed, power, direction, children, machine_pos) in transporters {
-        // Compute available adjacent energy for this transporter
-        let energy_supply = machine_pos
-            .adjacent()
-            .flat_map(|pos| energy_producers.get(&pos).map(|e| e.0))
-            .sum::<f32>();
+        // Accumulate energy produced by adjacent machines (e.g., windmills)
+        let energy_supply = energy_networks
+            .power_provided
+            .get(machine_pos)
+            // Default to 0 here instead of panicing as pre-checking children is expensive
+            .unwrap_or(&0.);
 
         // Calculate work rate based on current power supply
         let satisfaction = (energy_supply / power.0).min(1.0);
