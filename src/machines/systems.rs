@@ -652,8 +652,38 @@ pub fn tick_transporters(
     }
 }
 
+pub fn precheck_pickeruppers(
+    picker_uppers: Query<(&TilePos, &mut MachineState, &PowerConsumption), With<PickerUpper>>,
+    ground_items: Query<(Entity, &WorldPos, &ItemType), With<GroundItem>>,
+    mut energy_networks: ResMut<EnergyNetworks>,
+) {
+    // Create LUT for ground items
+    // TODO: replace this with some spatial query data structure stored as a resource
+    let ground_items = ground_items.iter().fold(
+        HashMap::<_, Vec<_>>::new(),
+        |mut hm, (entity, world_pos, item_type)| {
+            // NOTE: +0.5 so we search centre of tile instead of origin corner
+            hm.entry((world_pos + Vec2::splat(0.5)).tile())
+                .or_default()
+                .push((entity, item_type));
+
+            hm
+        },
+    );
+
+    for (machine_pos, mut state, power) in picker_uppers {
+        if !ground_items.contains_key(machine_pos) {
+            // No items, reset progress
+            state.0 = 0.;
+            continue;
+        }
+
+        energy_networks.power_demands.insert(*machine_pos, power.0);
+    }
+}
+
 /// Advance the state of the picker-upper if there's an item on its tile
-pub fn tick_pickerupper(
+pub fn tick_pickeruppers(
     picker_uppers: Query<
         (
             &TilePos,
@@ -666,7 +696,7 @@ pub fn tick_pickerupper(
     >,
     machines: Machines<(Entity, &Machine, &AcceptsItems), With<Placed>>,
     ground_items: Query<(Entity, &WorldPos, &ItemType), With<GroundItem>>,
-    energy_producers: Machines<&PowerProduction, With<Placed>>,
+    energy_networks: Res<EnergyNetworks>,
     timer: Res<Time>,
     mut commands: Commands,
     mut transfer_items: MessageWriter<TransferItem>,
@@ -693,10 +723,10 @@ pub fn tick_pickerupper(
         };
 
         // Accumulate energy produced by adjacent machines
-        let energy_supply = machine_pos
-            .adjacent()
-            .flat_map(|pos| energy_producers.get(&pos).map(|e| e.0))
-            .sum::<f32>();
+        let energy_supply = energy_networks
+            .power_provided
+            .get(machine_pos)
+            .expect("No power provided for this machine!");
 
         // Calculate work rate at current power level
         let satisfaction = (energy_supply / power.0).min(1.0);

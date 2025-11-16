@@ -28,13 +28,14 @@ impl Plugin for MachinePlugin {
                         precheck_resource_harvesters,
                         precheck_terrain_harvesters,
                         precheck_transporters,
+                        precheck_pickeruppers,
                     ),
                     distribute_energy,
                     (
                         tick_resource_harvesters,
                         tick_terrain_harvesters,
                         tick_transporters,
-                        tick_pickerupper,
+                        tick_pickeruppers,
                     ),
                     transfer_items,
                 )
