@@ -22,6 +22,21 @@ pub fn init_knowledge(mut commands: Commands) {
     }
 }
 
+/// Debug system to unlock everything
+pub fn unlock_everything(
+    mut commands: Commands,
+    unlockables: Query<(Entity, &UnlockName), Without<Unlocked>>,
+) {
+    for (entity, name) in unlockables {
+        // Add the Unlocked tag
+        info!("Unlocked knowledge: {:?}", name);
+        commands.entity(entity).insert(Unlocked);
+        commands.trigger(UnlockEvent {
+            name: name.0.clone(),
+        });
+    }
+}
+
 /// Checks all of the knowledge and unlocks ones that have met their requirements
 pub fn check_unlocks(
     query: Query<(Entity, &UnlockRequirements, &UnlockName), Without<Unlocked>>,
