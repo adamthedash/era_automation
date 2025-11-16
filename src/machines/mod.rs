@@ -24,7 +24,7 @@ impl Plugin for MachinePlugin {
                     |mut networks: ResMut<EnergyNetworks>| {
                         networks.power_demands.clear();
                     },
-                    (precheck_resource_harvesters,),
+                    (precheck_resource_harvesters, precheck_terrain_harvesters),
                     distribute_energy,
                     (
                         tick_resource_harvesters,

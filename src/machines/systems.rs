@@ -424,6 +424,48 @@ pub fn tick_resource_harvesters(
     }
 }
 
+pub fn precheck_terrain_harvesters(
+    harvesters: Query<
+        (
+            &TilePos,
+            &mut MachineState,
+            &PowerConsumption,
+            &Direction,
+            &HarvestableTerrain,
+        ),
+        With<Harvester>,
+    >,
+    chunks: Chunks<&TerrainData>,
+    mut energy_networks: ResMut<EnergyNetworks>,
+) {
+    for (tile_pos, mut state, power, direction, harvestable_terrain) in harvesters {
+        // Check if there's a harvestable node under of the machine
+        let resource_pos = tile_pos + direction.0;
+
+        // Get terrain under the machine
+        let (chunk_pos, offset) = resource_pos.to_chunk_offset();
+        let terrain_data = chunks.get(&chunk_pos).expect("Chunk data not generated");
+        let terrain_type = &terrain_data.0[offset.y as usize][offset.x as usize];
+
+        // Check that resource can be harvested by this machine
+        if !harvestable_terrain.0.contains(terrain_type) {
+            // Can't harvest this type of node, so reset progress
+            state.0 = 0.;
+            continue;
+        }
+
+        // Check that the terrain can produce something
+        if terrain_type.item_type().is_none() {
+            // No item given
+            state.0 = 0.;
+            continue;
+        };
+
+        // Register power demand for this machine
+        energy_networks.power_demands.insert(*tile_pos, power.0);
+    }
+}
+
 /// Advance the state of the terrain harvesters
 pub fn tick_terrain_harvesters(
     harvesters: Query<
@@ -439,13 +481,15 @@ pub fn tick_terrain_harvesters(
     >,
     chunks: Chunks<&TerrainData>,
     machines: Machines<(Entity, &Machine, &AcceptsItems), With<Placed>>,
-    energy_producers: Machines<&PowerProduction, With<Placed>>,
+    energy_networks: Res<EnergyNetworks>,
     timer: Res<Time>,
     sprite_sheets: Res<SpriteSheets>,
     mut commands: Commands,
     mut transfer_items: MessageWriter<TransferItem>,
 ) {
     for (tile_pos, mut state, speed, power, direction, harvestable_terrain) in harvesters {
+        // TODO: These pre-checks have already been done for power calculations
+
         // Check if there's a harvestable node under of the machine
         let resource_pos = tile_pos + direction.0;
 
@@ -469,10 +513,10 @@ pub fn tick_terrain_harvesters(
         };
 
         // Accumulate energy produced by adjacent machines (e.g., windmills)
-        let energy_supply = tile_pos
-            .adjacent()
-            .flat_map(|pos| energy_producers.get(&pos).map(|e| e.0))
-            .sum::<f32>();
+        let energy_supply = energy_networks
+            .power_provided
+            .get(tile_pos)
+            .expect("No power provided for this machine!");
 
         // Calculate work rate at current power level
         let satisfaction = (energy_supply / power.0).min(1.0);
