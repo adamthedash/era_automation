@@ -10,7 +10,7 @@ use crate::{
     items::ItemType,
     map::{ChunkCreated, ChunkPos, TerrainData},
     player::Targettable,
-    sprites::{GetSprite, SpriteSheets, TerrainSprite},
+    sprites::{GetSprite, ResourceSprite, SpriteSheets, TerrainSprite},
     utils,
 };
 
@@ -72,5 +72,43 @@ pub fn spawn_resources(
                 resources.0.insert(tile_pos, entity);
             }
         }
+    }
+}
+
+/// Sync resource node sprites when their `ResourceAmount` changes.
+pub fn sync_resource_sprites(
+    mut commands: Commands,
+    sprite_sheets: Res<SpriteSheets>,
+    query: Query<
+        (Entity, &ResourceNodeType, &ResourceAmount, &Children),
+        (With<ResourceMarker>, Changed<ResourceAmount>),
+    >,
+    sprite_entities: Query<(), With<Sprite>>,
+) {
+    for (entity, node_type, amount, children) in query.iter() {
+        // Despawn old sprite
+        let sprite = children
+            .iter()
+            .find(|child| sprite_entities.get(*child).is_ok())
+            .expect("Node has no sprite!");
+        commands.entity(sprite).despawn();
+
+        // Choose the appropriate sprite based on remaining amount
+        let sprite_to_spawn = if amount.0 == 0 {
+            match node_type {
+                ResourceNodeType::Tree => ResourceSprite::TreeDepleted,
+                ResourceNodeType::Bush => ResourceSprite::BushDepleted,
+                ResourceNodeType::Water => unreachable!("Water node should never be rendered"),
+            }
+        } else {
+            match node_type {
+                ResourceNodeType::Tree => ResourceSprite::Tree,
+                ResourceNodeType::Bush => ResourceSprite::Bush,
+                ResourceNodeType::Water => unreachable!("Water node should never be rendered"),
+            }
+        };
+
+        // Spawn the selected sprite as a child of the resource entity
+        sprite_to_spawn.spawn_sprite(&mut commands, &sprite_sheets, Some(entity));
     }
 }
