@@ -1,6 +1,11 @@
 pub mod bundles;
 mod components;
+pub mod harvester;
+pub mod network;
+pub mod picker_upper;
 pub mod systems;
+pub mod transporter;
+pub mod windmill;
 
 use bevy::prelude::*;
 pub use bundles::*;
@@ -21,6 +26,7 @@ impl Plugin for MachinePlugin {
                     compute_energy_networks,
                     (tick_windmills,),
                     produce_energy,
+                    // Reset power demands before re-calculating
                     |mut networks: ResMut<EnergyNetworks>| {
                         networks.power_demands.clear();
                     },

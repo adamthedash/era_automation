@@ -1,18 +1,13 @@
 use std::ops::Deref;
 
-use bevy::{
-    platform::collections::{HashMap, HashSet},
-    prelude::*,
-};
+use bevy::{platform::collections::HashMap, prelude::*};
 
 use super::bundles::*;
-use crate::{
-    items::ItemType,
-    map::TilePos,
-    resources::ResourceNodeType,
-    sprites::{EntitySprite, TerrainSprite},
-    utils::query::LUTParam,
+pub use super::{
+    harvester::components::*, network::components::*, picker_upper::components::*,
+    transporter::components::*, windmill::components::*,
 };
+use crate::{items::ItemType, map::TilePos, sprites::EntitySprite, utils::query::LUTParam};
 
 /// Marker for machines, also machine type
 #[derive(Component, Debug)]
@@ -119,36 +114,6 @@ pub struct AnimationSprites(pub Vec<EntitySprite>);
 #[derive(Component)]
 pub struct Placed;
 
-/// Marker for harvesting machines
-#[derive(Component)]
-pub struct Harvester;
-
-/// Types of resources this machine can harvest
-#[derive(Component)]
-pub struct HarvestableNodes(pub HashSet<ResourceNodeType>);
-
-/// Types of terrain this machine can harvest
-#[derive(Component)]
-pub struct HarvestableTerrain(pub HashSet<TerrainSprite>);
-
-/// Marker for machines which transport from one tile to the next
-#[derive(Component)]
-pub struct Transporter;
-
-/// Relationship for an item being transported by a transporter
-#[derive(Component)]
-#[relationship(relationship_target = Transporting)]
-pub struct TransportedBy(pub Entity);
-
-/// Relationship for a transporter
-#[derive(Component)]
-#[relationship_target(relationship = TransportedBy)]
-pub struct Transporting(Vec<Entity>);
-
-/// Marker for picker-upper machines
-#[derive(Component)]
-pub struct PickerUpper;
-
 /// Request to transfer an item into a machine
 #[derive(Message)]
 pub struct TransferItem {
@@ -158,29 +123,6 @@ pub struct TransferItem {
     pub target_machine: Entity,
 }
 
-/// Marker for windmill machines
-#[derive(Component)]
-pub struct Windmill;
-
 /// Current energy produced per second by windmills (amount available to adjacent machines).
 #[derive(Component)]
 pub struct PowerProduction(pub f32);
-
-/// Resource containing connected networks of placed machines.
-///
-/// `networks` contains each network as a `HashSet<TilePos>` (4-connected).
-/// `membership` maps a `TilePos` to the index in `networks` for quick lookup
-/// of which network a tile belongs to.
-#[derive(Resource, Default)]
-pub struct EnergyNetworks {
-    /// Connected components
-    pub networks: Vec<HashSet<TilePos>>,
-    /// LUT for network membership
-    pub membership: HashMap<TilePos, usize>,
-    /// Requested power from consumer machines
-    pub power_demands: HashMap<TilePos, f32>,
-    /// Total power available to each network
-    pub power_available: Vec<f32>,
-    /// Power made available to requesting machines
-    pub power_provided: HashMap<TilePos, f32>,
-}
