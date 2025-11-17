@@ -3,9 +3,8 @@ use bevy::{
     sprite_render::{TileData, TilemapChunk, TilemapChunkTileData},
 };
 
-use crate::{consts::CHUNK_SIZE, ground_items::GroundItem, utils::noise::perlin_stack};
-
 use super::components::*;
+use crate::{consts::CHUNK_SIZE, ground_items::GroundItem, utils::noise::perlin_stack};
 
 /// Set up the world generation
 pub fn init_world_gen(mut commands: Commands) {

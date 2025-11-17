@@ -1,12 +1,12 @@
 use std::f32::consts::FRAC_PI_2;
 
+use bevy::{math::ops::atan2, prelude::*};
+
+use super::components::*;
 use crate::{
     map::{ChunkPos, GradientData},
     sprites::{GetSprite, ResourceSprite, SpriteSheets},
 };
-
-use super::components::*;
-use bevy::{math::ops::atan2, prelude::*};
 
 pub fn toggle_gradient_arrows(mut enabled: ResMut<GradientArrowsEnabled>) {
     enabled.0 ^= true;

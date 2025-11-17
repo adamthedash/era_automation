@@ -2,9 +2,8 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use crate::{crafting::FailedCraft, knowledge::UnlockEvent};
-
 use super::components::*;
+use crate::{crafting::FailedCraft, knowledge::UnlockEvent};
 
 /// Spawn the notification box
 pub fn init_notification_system(mut commands: Commands) {

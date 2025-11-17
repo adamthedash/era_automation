@@ -3,7 +3,6 @@ mod data;
 mod systems;
 
 use bevy::prelude::*;
-
 pub use components::*;
 use systems::*;
 

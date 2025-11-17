@@ -1,5 +1,6 @@
-use crate::{consts::TILE_RAW_SIZE, items::ItemType};
 use bevy::prelude::*;
+
+use crate::{consts::TILE_RAW_SIZE, items::ItemType};
 
 /// Indexes into terrain_sprites.png
 #[derive(Component, Clone, Copy, PartialEq, Eq, Default, Hash, Debug)]

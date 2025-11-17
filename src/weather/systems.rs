@@ -1,5 +1,9 @@
 use std::f32::consts::{FRAC_PI_2, PI};
 
+use bevy::prelude::*;
+use rand::{random_bool, random_range};
+
+use super::components::*;
 use crate::{
     consts::{
         FLUFF_FADE, FLUFF_LIFETIME, FLUFFS_PER_SECOND, WIND_CHANGES_PER_SECOND,
@@ -8,10 +12,6 @@ use crate::{
     map::WorldPos,
     player::Player,
 };
-
-use super::components::*;
-use bevy::prelude::*;
-use rand::{random_bool, random_range};
 
 /// Spawn some fluff particles to show wind direction
 pub fn spawn_fluff(

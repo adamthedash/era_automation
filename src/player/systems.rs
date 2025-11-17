@@ -1,4 +1,3 @@
-use crate::map::Chunks;
 use bevy::{
     self,
     ecs::{bundle::InsertMode, system::entity_command},
@@ -13,7 +12,7 @@ use crate::{
     },
     container::{ContainableItems, ContainedBundle},
     items::ItemType,
-    map::{TerrainData, TilePos, WorldPos},
+    map::{Chunks, TerrainData, TilePos, WorldPos},
     resources::{ResourceAmount, ResourceMarker, ResourceNodeType},
     sprites::{EntitySprite, GetSprite, ItemSprite, SpriteSheets, TerrainSprite},
 };

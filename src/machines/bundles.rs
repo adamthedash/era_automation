@@ -1,5 +1,6 @@
-use bevy::{platform::collections::HashSet, prelude::*};
 use std::iter::FromIterator;
+
+use bevy::{platform::collections::HashSet, prelude::*};
 
 use super::components::*;
 use crate::{

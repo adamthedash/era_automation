@@ -1,9 +1,7 @@
 use bevy::prelude::*;
 
+use super::{components::*, data};
 use crate::{ground_items::ItemRolled, player::HarvestEvent, village::DepositEvent};
-
-use super::components::*;
-use super::data;
 
 /// Initialise the knowledge
 /// Knowledge definititions are stored in the data module

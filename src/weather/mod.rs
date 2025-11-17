@@ -1,10 +1,9 @@
 mod components;
 pub mod systems;
 
+use bevy::prelude::*;
 pub use components::*;
 use systems::*;
-
-use bevy::prelude::*;
 
 pub struct WeatherPlugin;
 impl Plugin for WeatherPlugin {

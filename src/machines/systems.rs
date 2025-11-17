@@ -1,9 +1,3 @@
-use crate::{
-    map::{Chunks, TerrainData},
-    resources::ResourceNodes,
-    village::Stockpiles,
-    weather::Wind,
-};
 use std::f32::consts::FRAC_PI_2;
 
 use bevy::{
@@ -11,18 +5,17 @@ use bevy::{
     prelude::*,
 };
 
+use super::{bundles::*, components::*};
 use crate::{
     ground_items::{GroundItem, GroundItemBundle},
     items::ItemType,
-    map::{TilePos, WorldPos},
+    map::{Chunks, TerrainData, TilePos, WorldPos},
     player::{HeldBy, HeldItemBundle, Holding, Player, TargettedBy},
-    resources::{ResourceMarker, ResourceNodeLUT, ResourceNodeType},
+    resources::{ResourceMarker, ResourceNodeLUT, ResourceNodeType, ResourceNodes},
     sprites::{GetSprite, SpriteSheets},
-    village::{DepositEvent, ResourceStockpile, VillageCentre},
+    village::{DepositEvent, ResourceStockpile, Stockpiles, VillageCentre},
+    weather::Wind,
 };
-
-use super::bundles::*;
-use super::components::*;
 
 /// Compute connected networks of placed machines and store them in the `EnergyNetworks` resource.
 ///

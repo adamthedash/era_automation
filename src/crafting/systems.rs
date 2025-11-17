@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
 use super::components::*;
-
 use crate::{
     consts::PLAYER_REACH,
     knowledge::Unlocked,

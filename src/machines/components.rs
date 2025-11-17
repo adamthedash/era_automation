@@ -1,8 +1,9 @@
+use std::ops::Deref;
+
 use bevy::{
     platform::collections::{HashMap, HashSet},
     prelude::*,
 };
-use std::ops::Deref;
 
 use super::bundles::*;
 use crate::{

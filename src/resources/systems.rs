@@ -1,7 +1,7 @@
-use super::components::*;
 use bevy::prelude::*;
 use rand::random_bool;
 
+use super::components::*;
 use crate::{
     consts::{
         CHUNK_SIZE, RESOURCE_DENSITY_BUSH, RESOURCE_DENSITY_LOG, RESOURCE_SPAWN_AMOUNT,

@@ -1,5 +1,4 @@
-use std::marker::PhantomData;
-use std::{hash::Hash, ops::Deref};
+use std::{hash::Hash, marker::PhantomData, ops::Deref};
 
 use bevy::{
     ecs::{

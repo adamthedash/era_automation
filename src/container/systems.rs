@@ -1,6 +1,6 @@
-use super::components::*;
 use bevy::prelude::*;
 
+use super::components::*;
 use crate::{
     ground_items::{GroundItem, GroundItemBundle},
     items::ItemType,

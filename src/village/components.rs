@@ -1,9 +1,8 @@
-use bevy::platform::collections::HashMap;
-use bevy::prelude::*;
 use std::ops::Deref;
 
-use crate::resources::ResourceType;
-use crate::utils::query::LUTParam;
+use bevy::{platform::collections::HashMap, prelude::*};
+
+use crate::{resources::ResourceType, utils::query::LUTParam};
 
 /// Tracks the amount of a resource stored in the village
 #[derive(Component)]

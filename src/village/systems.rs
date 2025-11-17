@@ -1,5 +1,6 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 
+use super::components::*;
 use crate::{
     consts::Z_RESOURCES,
     container::{ContainedBundle, ContainedBy, Container, Contains},
@@ -10,8 +11,6 @@ use crate::{
     resources::ResourceType,
     sprites::{GetSprite, ResourceSprite, SpriteSheets},
 };
-
-use super::components::*;
 
 /// Initialise the starting resource stockpiles
 pub fn setup_stockpiles(mut commands: Commands, mut lut: ResMut<StockpileLUT>) {

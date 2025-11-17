@@ -1,7 +1,6 @@
-use crate::crafting::Recipe;
-use crate::items::ItemType;
-use crate::knowledge::UnlockRequirement;
-use crate::resources::ResourceType;
+use crate::{
+    crafting::Recipe, items::ItemType, knowledge::UnlockRequirement, resources::ResourceType,
+};
 
 /// A single knowledge definition .
 #[derive(Debug)]
