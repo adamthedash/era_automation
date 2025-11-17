@@ -2,11 +2,12 @@ use bevy::prelude::*;
 
 use super::super::components::*;
 use crate::{
+    consts::RESOURCE_PICKUP_AMOUNT,
     ground_items::GroundItemBundle,
     items::ItemType,
     map::{Chunks, TerrainData, TilePos},
-    resources::{ResourceMarker, ResourceNodeType, ResourceNodes},
-    sprites::{GetSprite, SpriteSheets},
+    resources::{ResourceAmount, ResourceMarker, ResourceNodeType, ResourceNodes},
+    sprites::{GetSprite, ResourceSprite, SpriteSheets},
 };
 
 pub fn precheck_resource_harvesters(
@@ -20,18 +21,25 @@ pub fn precheck_resource_harvesters(
         ),
         With<Harvester>,
     >,
-    resources: ResourceNodes<&ResourceNodeType, With<ResourceMarker>>,
+    resources: ResourceNodes<(&ResourceNodeType, &ResourceAmount), With<ResourceMarker>>,
     mut energy_networks: ResMut<EnergyNetworks>,
 ) {
     for (tile_pos, mut state, power, direction, harvestable_nodes) in harvesters {
         let resource_pos = tile_pos + direction.0;
 
         // Check if there's a harvestable node in front of the machine
-        let Some(resource_type) = resources.get(&resource_pos) else {
+        let Some((resource_type, resource_amount)) = resources.get(&resource_pos) else {
             // No resource, so reset progress
             state.0 = 0.;
             continue;
         };
+
+        // Check that there's some left to harvest
+        if resource_amount.0 == 0 {
+            // Resource is depleted, so reset progress
+            state.0 = 0.;
+            continue;
+        }
 
         // Check that resource can be harvested by this machine
         if !harvestable_nodes.0.contains(resource_type) {
@@ -58,25 +66,43 @@ pub fn tick_resource_harvesters(
         ),
         With<Harvester>,
     >,
-    resources: ResourceNodes<(&ResourceNodeType, &ItemType), With<ResourceMarker>>,
+    mut resources: ResourceNodes<
+        (
+            Entity,
+            &ResourceNodeType,
+            &ItemType,
+            &mut ResourceAmount,
+            &Children,
+        ),
+        With<ResourceMarker>,
+    >,
     machines: Machines<(Entity, &Machine, &AcceptsItems), With<Placed>>,
     energy_networks: Res<EnergyNetworks>,
     timer: Res<Time>,
     sprite_sheets: Res<SpriteSheets>,
     mut commands: Commands,
     mut transfer_items: MessageWriter<TransferItem>,
+    sprite_entities: Query<(), With<Sprite>>,
 ) {
     for (tile_pos, mut state, speed, power, direction, harvestable_nodes) in harvesters {
         // TODO: These pre-checks have already been done for power calculations
 
         // Check if there's a harvestable node in front of the machine
         let resource_pos = tile_pos + direction.0;
-
-        let Some((resource_type, item_type)) = resources.get(&resource_pos) else {
+        let Some((resource, resource_type, item_type, mut amount, children)) =
+            resources.get_mut(&resource_pos)
+        else {
             // No resource, so reset progress
             state.0 = 0.;
             continue;
         };
+
+        // Check that the node has some resource left in it
+        if amount.0 == 0 {
+            // Resource is depleted, so reset progress
+            state.0 = 0.;
+            continue;
+        }
 
         // Check that resource can be harvested by this machine
         if !harvestable_nodes.0.contains(resource_type) {
@@ -126,6 +152,28 @@ pub fn tick_resource_harvesters(
             commands
                 .entity(item)
                 .insert(GroundItemBundle::new(&output_pos.as_world_pos()));
+        }
+
+        // Decrement resource amount now that we've produced an item.
+        let pickup_amount = RESOURCE_PICKUP_AMOUNT.min(amount.0);
+        amount.0 -= pickup_amount;
+
+        // Check if the resoource has been depleted and update sprite accordingly
+        if amount.0 == 0 {
+            // Despawn old sprite
+            let sprite_entity = children
+                .iter()
+                .find(|child| sprite_entities.get(*child).is_ok())
+                .expect("Resource node has no sprite!");
+            commands.entity(sprite_entity).despawn();
+
+            // Spawn new depleted sprite
+            let depleted_sprite = match resource_type {
+                ResourceNodeType::Tree => ResourceSprite::TreeDepleted,
+                ResourceNodeType::Bush => ResourceSprite::BushDepleted,
+                ResourceNodeType::Water => unreachable!("Water node should never be rendered"),
+            };
+            depleted_sprite.spawn_sprite(&mut commands, &sprite_sheets, Some(resource));
         }
     }
 }

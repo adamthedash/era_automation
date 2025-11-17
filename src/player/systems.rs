@@ -14,7 +14,7 @@ use crate::{
     items::ItemType,
     map::{Chunks, TerrainData, TilePos, WorldPos},
     resources::{ResourceAmount, ResourceMarker, ResourceNodeType},
-    sprites::{EntitySprite, GetSprite, ItemSprite, SpriteSheets, TerrainSprite},
+    sprites::{EntitySprite, GetSprite, ItemSprite, ResourceSprite, SpriteSheets, TerrainSprite},
 };
 
 pub fn setup_player(mut commands: Commands, sprite_sheets: Res<SpriteSheets>) {
@@ -148,15 +148,27 @@ pub fn harvest_resource(
     mut commands: Commands,
     player: Single<Entity, With<Player>>,
     mut targetted_resources: Populated<
-        (Entity, &ResourceNodeType, &ItemType, &mut ResourceAmount),
+        (
+            Entity,
+            &ResourceNodeType,
+            &ItemType,
+            &mut ResourceAmount,
+            &Children,
+        ),
         (With<ResourceMarker>, With<TargettedBy>, Without<Player>),
     >,
+    sprite_entities: Query<(), With<Sprite>>,
     sprite_sheets: Res<SpriteSheets>,
 ) {
-    let (resource_entity, node_type, item_type, mut amount) = targetted_resources
+    let (resource_entity, node_type, item_type, mut amount, children) = targetted_resources
         .iter_mut()
         .next()
         .unwrap_or_else(|| unreachable!("Populated query"));
+
+    if amount.0 == 0 {
+        // No more resource left
+        return;
+    }
 
     info!("Harvesting resource: {:?}", node_type);
 
@@ -173,13 +185,25 @@ pub fn harvest_resource(
 
     item_type.spawn_sprite(&mut commands, &sprite_sheets, Some(entity));
 
-    // Remove resource if it's depleted
-    if amount.0 == pickup_amount {
-        // Player has grabbed it all, so remove the node
-        commands.entity(resource_entity).despawn();
-    } else {
-        // Player has only picked up some of it
-        amount.0 -= pickup_amount;
+    // Subtract the pickup amount, then swap the sprite if the node is now depleted.
+    amount.0 -= pickup_amount;
+
+    // If the node has been depleted by this pickup, update its sprite to the depleted variant.
+    if amount.0 == 0 {
+        // Despawn old sprite
+        let sprite_entity = children
+            .iter()
+            .find(|child| sprite_entities.get(*child).is_ok())
+            .expect("Resource node has no sprite!");
+        commands.entity(sprite_entity).despawn();
+
+        // Spawn new depleted sprite
+        let depleted_sprite = match node_type {
+            ResourceNodeType::Tree => ResourceSprite::TreeDepleted,
+            ResourceNodeType::Bush => ResourceSprite::BushDepleted,
+            ResourceNodeType::Water => unreachable!("Water node should never be rendered"),
+        };
+        depleted_sprite.spawn_sprite(&mut commands, &sprite_sheets, Some(resource_entity));
     }
 
     commands.trigger(HarvestEvent {

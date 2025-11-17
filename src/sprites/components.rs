@@ -32,7 +32,9 @@ impl TerrainSprite {
 #[repr(usize)]
 pub enum ResourceSprite {
     Tree,
+    TreeDepleted,
     Bush,
+    BushDepleted,
     House,
     DebugArrow,
 }
