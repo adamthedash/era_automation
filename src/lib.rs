@@ -6,7 +6,6 @@
 pub mod consts;
 pub mod container;
 pub mod crafting;
-pub mod data;
 pub mod debug;
 pub mod ground_items;
 pub mod items;

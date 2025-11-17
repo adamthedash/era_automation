@@ -16,11 +16,10 @@ impl Plugin for DebugPlugin {
             .init_resource::<ElectricityDebugEnabled>()
             .add_systems(
                 Update,
-                toggle_gradient_arrows.run_if(key_just_pressed(KeyCode::KeyG)),
-            )
-            .add_systems(
-                Update,
-                toggle_electricity_debug.run_if(key_just_pressed(KeyCode::KeyL)),
+                (
+                    toggle_gradient_arrows.run_if(key_just_pressed(KeyCode::KeyG)),
+                    toggle_electricity_debug.run_if(key_just_pressed(KeyCode::KeyL)),
+                ),
             )
             .add_systems(
                 FixedUpdate,
@@ -29,9 +28,7 @@ impl Plugin for DebugPlugin {
                         .chain()
                         .run_if(resource_equals(GradientArrowsEnabled(true))),
                     despawn_gradient_arrows.run_if(resource_equals(GradientArrowsEnabled(false))),
-                    (spawn_electricity_debug, update_electricity_debug)
-                        .chain()
-                        .run_if(resource_equals(ElectricityDebugEnabled(true))),
+                    update_electricity_debug.run_if(resource_equals(ElectricityDebugEnabled(true))),
                     despawn_electricity_debug
                         .run_if(resource_equals(ElectricityDebugEnabled(false))),
                 ),

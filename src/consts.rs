@@ -35,6 +35,11 @@ pub const Z_TRANSPORTED_ITEM: f32 = 1e-1;
 /// Layer that rain/snow/etc is rendered at
 pub const Z_WEATHER: f32 = 10.;
 
+pub const Z_DEBUG: f32 = 100.;
+
+/// Height in pixels at which fonts are rastered (higher = sharper)
+pub const DEBUG_FONT_RENDER_SIZE: f32 = 32.;
+
 /// Tiles around the starting point which can't be water terrain
 pub const TERRAIN_STARTING_RADIUS: i32 = 25;
 /// Tiles around the starting point which can't spawn resource nodes
