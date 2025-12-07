@@ -45,6 +45,18 @@ impl GetSprite for ResourceNodeType {
 #[derive(Component)]
 pub struct ResourceAmount(pub usize);
 
+/// How fast a resource node regenerates, amount per second
+#[derive(Component)]
+pub struct ResourceRegenRate(pub f32);
+
+/// Progress towards the next regeneration tick
+#[derive(Component)]
+pub struct ResourceRegenState(pub f32);
+
+/// Maximum amount of resource a node can have at once
+#[derive(Component)]
+pub struct ResourceMaxAmount(pub usize);
+
 /// Sparse lookup for all resource node entities spawned in the world
 #[derive(Resource, Default)]
 pub struct ResourceNodeLUT(pub HashMap<TilePos, Entity>);

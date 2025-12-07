@@ -1,2 +1,5 @@
 [toolchain]
-channel = "nightly"
+#  https://github.com/rust-lang/rust-analyzer/issues/21216
+# Remove in a few days when RA gets a new release
+channel = "nightly-2025-12-01"
+# channel = "nightly"

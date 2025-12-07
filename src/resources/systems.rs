@@ -4,8 +4,8 @@ use rand::random_bool;
 use super::components::*;
 use crate::{
     consts::{
-        CHUNK_SIZE, RESOURCE_DENSITY_BUSH, RESOURCE_DENSITY_LOG, RESOURCE_SPAWN_AMOUNT,
-        RESOURCE_STARTING_RADIUS, Z_RESOURCES,
+        CHUNK_SIZE, RESOURCE_DENSITY_BUSH, RESOURCE_DENSITY_LOG, RESOURCE_MAX_AMOUNT,
+        RESOURCE_REGEN_RATE, RESOURCE_SPAWN_AMOUNT, RESOURCE_STARTING_RADIUS, Z_RESOURCES,
     },
     items::ItemType,
     map::{ChunkCreated, ChunkPos, TerrainData},
@@ -59,6 +59,9 @@ pub fn spawn_resources(
                         node_type,
                         // TODO: Resource amount spawn logic
                         ResourceAmount(RESOURCE_SPAWN_AMOUNT),
+                        ResourceRegenRate(RESOURCE_REGEN_RATE),
+                        ResourceRegenState(0.),
+                        ResourceMaxAmount(RESOURCE_MAX_AMOUNT),
                         ResourceMarker,
                         Targettable,
                         // Render
@@ -110,5 +113,35 @@ pub fn sync_resource_sprites(
 
         // Spawn the selected sprite as a child of the resource entity
         sprite_to_spawn.spawn_sprite(&mut commands, &sprite_sheets, Some(entity));
+    }
+}
+
+/// Tick resource nodes to regenerate resources
+pub fn regenerate_resource_nodes(
+    resource_nodes: Query<
+        (
+            &ResourceRegenRate,
+            &mut ResourceRegenState,
+            &mut ResourceAmount,
+            &ResourceMaxAmount,
+        ),
+        With<ResourceMarker>,
+    >,
+    timer: Res<Time>,
+) {
+    for (rate, mut state, mut amount, max) in resource_nodes {
+        if amount.0 >= max.0 {
+            // Resource is already full
+            // TODO: Marker component for "full" nodes so we don't keep ticking
+            state.0 = 0.;
+            continue;
+        }
+
+        // Grow
+        state.0 += rate.0 * timer.delta_secs();
+        while state.0 >= 1. && amount.0 < max.0 {
+            amount.0 += 1;
+            state.0 -= 1.;
+        }
     }
 }

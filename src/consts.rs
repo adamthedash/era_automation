@@ -49,6 +49,8 @@ pub const RESOURCE_STARTING_RADIUS: i32 = 5;
 pub const RESOURCE_PICKUP_AMOUNT: usize = 1;
 /// How much a resource node spawns with
 pub const RESOURCE_SPAWN_AMOUNT: usize = 2;
+pub const RESOURCE_MAX_AMOUNT: usize = 2;
+pub const RESOURCE_REGEN_RATE: f32 = 1. / 5.;
 
 /// Amount items bob up/down
 pub const GROUND_ITEM_BOB_HEIGHT: f32 = 0.5;
