@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 use rand::random_bool;
 
-use super::components::*;
+use super::{bundles::*, components::*};
 use crate::{
     consts::{
         CHUNK_SIZE, RESOURCE_DENSITY_BUSH, RESOURCE_DENSITY_LOG, RESOURCE_MAX_AMOUNT,
-        RESOURCE_REGEN_RATE, RESOURCE_SPAWN_AMOUNT, RESOURCE_STARTING_RADIUS, Z_RESOURCES,
+        RESOURCE_PICKUP_AMOUNT, RESOURCE_REGEN_RATE, RESOURCE_STARTING_RADIUS, Z_RESOURCES,
     },
     items::ItemType,
     map::{ChunkCreated, ChunkPos, TerrainData},
@@ -56,13 +56,15 @@ pub fn spawn_resources(
                         // Game data
                         tile_pos,
                         item_type,
-                        node_type,
                         // TODO: Resource amount spawn logic
-                        ResourceAmount(RESOURCE_SPAWN_AMOUNT),
-                        ResourceRegenRate(RESOURCE_REGEN_RATE),
-                        ResourceRegenState(0.),
-                        ResourceMaxAmount(RESOURCE_MAX_AMOUNT),
-                        ResourceMarker,
+                        ResourceNodeBundle::new(
+                            node_type,
+                            RESOURCE_PICKUP_AMOUNT,
+                            RESOURCE_MAX_AMOUNT,
+                            RESOURCE_REGEN_RATE,
+                        ),
+                        // For now, nodes spawn full
+                        ResourceNodeFull,
                         Targettable,
                         // Render
                         tile_pos.as_transform(Z_RESOURCES),
@@ -125,23 +127,40 @@ pub fn regenerate_resource_nodes(
             &mut ResourceAmount,
             &ResourceMaxAmount,
         ),
-        With<ResourceMarker>,
+        (With<ResourceMarker>, Without<ResourceNodeFull>),
     >,
     timer: Res<Time>,
 ) {
     for (rate, mut state, mut amount, max) in resource_nodes {
-        if amount.0 >= max.0 {
-            // Resource is already full
-            // TODO: Marker component for "full" nodes so we don't keep ticking
-            state.0 = 0.;
-            continue;
-        }
-
         // Grow
         state.0 += rate.0 * timer.delta_secs();
         while state.0 >= 1. && amount.0 < max.0 {
             amount.0 += 1;
             state.0 -= 1.;
+        }
+    }
+}
+
+/// Adds / removes the full marker so that resources aren't constantly ticked
+pub fn mark_resource_full(
+    resource_nodes: Query<
+        (
+            Entity,
+            &ResourceAmount,
+            &ResourceMaxAmount,
+            Has<ResourceNodeFull>,
+        ),
+        (With<ResourceMarker>, Changed<ResourceAmount>),
+    >,
+    mut commands: Commands,
+) {
+    for (entity, amount, max, has_marker) in resource_nodes {
+        if amount.0 >= max.0 && !has_marker {
+            // Just became full
+            commands.entity(entity).insert(ResourceNodeFull);
+        } else if amount.0 < max.0 && has_marker {
+            // Just became not full
+            commands.entity(entity).remove::<ResourceNodeFull>();
         }
     }
 }

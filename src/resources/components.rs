@@ -57,6 +57,10 @@ pub struct ResourceRegenState(pub f32);
 #[derive(Component)]
 pub struct ResourceMaxAmount(pub usize);
 
+/// Marker for a full resource node
+#[derive(Component)]
+pub struct ResourceNodeFull;
+
 /// Sparse lookup for all resource node entities spawned in the world
 #[derive(Resource, Default)]
 pub struct ResourceNodeLUT(pub HashMap<TilePos, Entity>);
